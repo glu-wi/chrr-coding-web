@@ -1,5 +1,5 @@
 ---
-title: SAS Macor(1)
+title: SAS Macor (1)
 author: ''
 date: '2022-07-07'
 slug: sas-macor-1
