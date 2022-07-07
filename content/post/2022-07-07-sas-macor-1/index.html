@@ -1,0 +1,246 @@
+---
+title: SAS Macor(1)
+author: ''
+date: '2022-07-07'
+slug: sas-macor-1
+categories:
+  - SAS
+tags:
+  - SAS Macro
+output:
+  blogdown::html_page:
+    toc: true
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+<div id="TOC">
+<ul>
+<li><a href="#why-use-macros">Why Use Macros?</a></li>
+<li><a href="#two-building-blocks">Two building blocks</a></li>
+<li><a href="#built-in-macro-variables">Built-In Macro Variables</a></li>
+<li><a href="#double-vs.-single-quotes">Double vs. Single Quotes</a></li>
+<li><a href="#creating-macro-variables">Creating Macro Variables</a></li>
+<li><a href="#assign-values-to-macro-variables">Assign Values to Macro Variables</a></li>
+<li><a href="#transfer-a-value-between-data-steps">Transfer a Value between DATA Steps</a></li>
+<li><a href="#use-proc-sql">Use PROC SQL</a></li>
+<li><a href="#macros">Macros</a></li>
+<li><a href="#macros---example">Macros - example</a></li>
+</ul>
+</div>
+
+<div id="why-use-macros" class="section level2">
+<h2>Why Use Macros?</h2>
+<p><strong>Don’t Repeat Yourself (DRY)</strong></p>
+<ul>
+<li><p>Macros automatically generate SAS code</p></li>
+<li><p>Make more dynamic, complex, and reusable SAS programs</p></li>
+<li><p>Reduce the effort required to read, write, and modify SAS Code</p></li>
+</ul>
+<hr />
+</div>
+<div id="two-building-blocks" class="section level2">
+<h2>Two building blocks</h2>
+<ul>
+<li><p><span style="color: blue;"><strong><code>macro variables</code></strong></span></p></li>
+<li><p><code>&amp;name</code>
+- refers to a macro variable
+- like a standard data variable except that it does not belong to a data set and has only a single value which is always character</p></li>
+<li><p><span style="color: blue;"><strong><code>macros</code></strong></span></p></li>
+<li><p><code>%name</code>
+- refers to a macro
+- a piece of a program that can contain complex logic including DATA and PROC steps, and macro statements (e.g., <code>%IF-%THEN/%ELSE</code> and <code>%DO-%END</code>)
+- Macros often —but not always—contain macro variables</p></li>
+</ul>
+<hr />
+</div>
+<div id="built-in-macro-variables" class="section level2">
+<h2>Built-In Macro Variables</h2>
+<table>
+<colgroup>
+<col width="53%" />
+<col width="46%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="right"></th>
+<th align="left">description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="right"><code>&amp;SYSDATE9</code></td>
+<td align="left">:stores the date the SAS session started (in DATE9. format, e.g., 02JUL2022)</td>
+</tr>
+<tr class="even">
+<td align="right"><code>&amp;SYSTIME</code></td>
+<td align="left">:stores the time the SAS session started</td>
+</tr>
+<tr class="odd">
+<td align="right"><code>&amp;SYSDAY</code></td>
+<td align="left">:stores day of the week the session started</td>
+</tr>
+<tr class="even">
+<td align="right">…</td>
+<td align="left">…</td>
+</tr>
+</tbody>
+</table>
+<pre class="sas"><code>proc print data = sashelp.cars;
+    where make = &#39;Audi&#39; and type = &#39;Sports&#39; ;
+    TITLE &quot;Sales as of &amp;SYSDAY &amp;SYSDATE&quot;;  #&lt;&lt;
+run;</code></pre>
+<ul>
+<li><code>%PUT _AUTOMATIC_;</code>
+<ul>
+<li>lists all automatic macro variables created by SAS</li>
+<li>It instructs the macro processor to write information to the SAS log</li>
+</ul></li>
+</ul>
+<hr />
+</div>
+<div id="double-vs.-single-quotes" class="section level2">
+<h2>Double vs. Single Quotes</h2>
+<ul>
+<li>If you place a macro variable inside quotation marks, SAS resolves only macro variables that are inside <code>double</code> quotation marks</li>
+</ul>
+<pre class="sas"><code>proc print data = sashelp.cars;
+    where make = &#39;Audi&#39; and type = &#39;Sports&#39; ;
+    TITLE &quot;Sales as of &amp;SYSDAY &amp;SYSDATE&quot;;  #&lt;&lt;
+run;</code></pre>
+<ul>
+<li>A macro variable reference enclosed within single quotation marks is not resolved</li>
+</ul>
+<pre class="sas"><code>proc print data = sashelp.cars;
+    where make = &#39;Audi&#39; and type = &#39;Sports&#39; ;
+    TITLE &#39;Sales as of &amp;SYSDAY &amp;SYSDATE&#39;;  #&lt;&lt;
+run;</code></pre>
+<hr />
+</div>
+<div id="creating-macro-variables" class="section level2">
+<h2>Creating Macro Variables</h2>
+<ul>
+<li>%LET statement</li>
+</ul>
+<pre class="sas"><code>%let year = 2022; #&lt;&lt;</code></pre>
+<ul>
+<li>PROC SQL</li>
+</ul>
+<pre class="sas"><code>proc sql;
+select count(*)
+    into :total  #&lt;&lt;
+    from sashelp.cars;
+quit;</code></pre>
+<ul>
+<li>DATA step</li>
+</ul>
+<pre class="sas"><code>data _null_;
+CALL SYMPUTX (&#39;today&#39;, PUT(&quot;&amp;sysdate&quot;d,worddate22.));  #&lt;&lt;
+run;
+%put &amp;today;</code></pre>
+<hr />
+</div>
+<div id="assign-values-to-macro-variables" class="section level2">
+<h2>Assign Values to Macro Variables</h2>
+<ul>
+<li>use a <code>%LET</code> Statement</li>
+</ul>
+<pre class="r"><code>%let n = 5;
+
+data want;
+    do i = 1 to &amp;n;
+    x = int(100*ranuni(0) + 1);
+    output;
+    end;
+run;
+
+title &quot;Data Set with &amp;n Random Numbers&quot;;
+proc print data=want noobs;
+run;</code></pre>
+<p>Notice that the <code>%LET</code> statement comes before the DATA step.
+When this program runs, each occurrence of &amp;n is replaced with a 5.</p>
+<hr />
+</div>
+<div id="transfer-a-value-between-data-steps" class="section level2">
+<h2>Transfer a Value between DATA Steps</h2>
+<ul>
+<li>CALL SYMPUT</li>
+<li>CALL SYMPUTX: Assigns a value to a macro variable, and removes both leading and trailing blanks.</li>
+</ul>
+<p>Suppose we want to compute the mean of MSRP from CARS data set and compare each individual value of MSRP against the mean</p>
+<pre class="r"><code>data have; set sashelp.cars (keep=make type origin msrp);
+  where type = &#39;Sports&#39; and origin = &quot;Europe&quot;;
+run;
+
+proc means data=have noprint;
+  var msrp;
+  output out=means mean= m_msrp;
+run;
+
+data _null_; set means;
+  call symputx(&#39;AveMSRP&#39;, m_msrp); #&lt;&lt;
+run;
+
+data want; set have;
+  Per_mspr = msrp / &amp;AveMSRP; #&lt;&lt;
+  format Per_mspr percent8.;
+run;</code></pre>
+<hr />
+</div>
+<div id="use-proc-sql" class="section level2">
+<h2>Use PROC SQL</h2>
+<pre class="r"><code>data have; set sashelp.cars (keep=make type origin msrp);
+  where type = &#39;Sports&#39; and origin = &quot;Europe&quot;;
+run;
+
+proc sql;
+select avg(msrp)
+    into :AveMSRP2  #&lt;&lt;
+from have;
+quit;
+
+data want2; set have;
+  Per_mspr = msrp / &amp;AveMSRP2; #&lt;&lt;
+  format Per_mspr percent8.;
+run;</code></pre>
+<hr />
+</div>
+<div id="macros" class="section level2">
+<h2>Macros</h2>
+<ul>
+<li>Defining a Macro</li>
+</ul>
+<pre class="r"><code>%MACRO macro-name;
+  macro-text
+%MEND &lt;macro-name&gt;;</code></pre>
+<ul>
+<li>Calling a Macro</li>
+</ul>
+<pre class="r"><code>%macro-name</code></pre>
+<ul>
+<li>Example</li>
+</ul>
+<pre class="r"><code>%macro today;
+  %put Today is &amp;sysday &amp;sysdate9;
+%mend;
+
+%today</code></pre>
+<hr />
+</div>
+<div id="macros---example" class="section level2">
+<h2>Macros - example</h2>
+<pre class="r"><code>%macro gen_rand(n, Start, End);
+  data rand_data;
+  do i = 1 to &amp;n;
+    x = int((&amp;End - &amp;Start + 1)*ranuni(0) + &amp;Start);
+    output;
+  end;
+  run;
+  proc print data=rand_data noobs;
+    title &quot;Randomly Generated Data Set with &amp;n Obs&quot;;
+    title2 &quot;Values are from &amp;Start to &amp;End&quot;;
+  run;
+%mend gen_rand;
+
+%gen_rand(5,1,10)</code></pre>
+</div>
