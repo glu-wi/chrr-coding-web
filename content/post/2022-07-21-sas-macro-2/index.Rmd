@@ -272,7 +272,7 @@ run;
 
 ### Test
 
--   MPRNT 
+-   **MPRNT** 
     -   `MPRINT` system option: print the resolved statements from macros in the SAS log. 
     -   Can be very useful for debugging
  
@@ -302,6 +302,10 @@ options mprint;
  MPRINT(READ_TXT):   guessingrows=500;
  MPRINT(READ_TXT):   run;
 ```
+
+-   **SYMBOLGEN**: writes the results of resolving macro variable references to the SAS log
+
+-   **MLOGIC**: helpful when we have %DO loops and or %IF-%THEN-%ELSE statements
 
 -   Compare data sets obtained with and without using macro
 

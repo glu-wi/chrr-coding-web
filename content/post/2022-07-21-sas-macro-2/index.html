@@ -273,7 +273,7 @@ run;</code></pre>
 <div id="test" class="section level3">
 <h3>Test</h3>
 <ul>
-<li>MPRNT
+<li><strong>MPRNT</strong>
 <ul>
 <li><code>MPRINT</code> system option: print the resolved statements from macros in the SAS log.</li>
 <li>Can be very useful for debugging</li>
@@ -300,7 +300,9 @@ OPTIONS NOMPRINT;   </code></pre>
  MPRINT(READ_TXT):   guessingrows=500;
  MPRINT(READ_TXT):   run;</code></pre>
 <ul>
-<li>Compare data sets obtained with and without using macro</li>
+<li><p><strong>SYMBOLGEN</strong>: writes the results of resolving macro variable references to the SAS log</p></li>
+<li><p><strong>MLOGIC</strong>: helpful when we have %DO loops and or %IF-%THEN-%ELSE statements</p></li>
+<li><p>Compare data sets obtained with and without using macro</p></li>
 </ul>
 <hr />
 </div>
