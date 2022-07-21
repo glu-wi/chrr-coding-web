@@ -1,0 +1,381 @@
+---
+title: SAS Macro (2)
+author: ''
+date: '2022-07-21'
+slug: sas-macro-2
+categories:
+  - SAS
+tags:
+  - SAS Macro
+output:
+  blogdown::html_page:
+    toc: true
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+<div id="TOC">
+<ul>
+<li><a href="#example-create-macro-variable">Example: Create Macro Variable</a>
+<ul>
+<li><a href="#run-the-code-and-check-sas-log">Run the code and check SAS log</a></li>
+<li><a href="#use-one-macro-variable">Use one macro variable</a></li>
+<li><a href="#check-log">Check Log</a></li>
+</ul></li>
+<li><a href="#macros">Macros</a>
+<ul>
+<li><a href="#macro-parameters">Macro Parameters</a></li>
+<li><a href="#procedure-to-write-a-macro">Procedure to write a macro</a></li>
+</ul></li>
+<li><a href="#example-create-a-macro">Example: Create a macro</a>
+<ul>
+<li><a href="#start-with-a-working-sas-program">Start with a working SAS program</a></li>
+<li><a href="#generalize-with-macro-variables">Generalize with macro variables</a></li>
+<li><a href="#create-a-macro">Create a macro</a></li>
+<li><a href="#test">Test</a></li>
+</ul></li>
+<li><a href="#example---another-look">Example - Another look</a>
+<ul>
+<li><a href="#modified">Modified</a></li>
+</ul></li>
+<li><a href="#more-to-explore">More to explore …</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+<div id="example-create-macro-variable" class="section level2">
+<h2>Example: Create Macro Variable</h2>
+<ul>
+<li><p><strong>v140</strong> Social Associations</p></li>
+<li><p>Assign <code>Libref</code>’s</p></li>
+</ul>
+<pre class="r"><code>libname datalib &#39;P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification\SAS data sets&#39;;
+libname geo &#39;P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification&#39;;
+libname vintage &#39;P:\CH-Ranking\Data\2022\2 Cleaned Data ready for Calculation or Verification&#39;;
+libname calcs &#39;P:\CH-Ranking\Data\2023\3 Data calculated needs checking&#39;;</code></pre>
+<ul>
+<li>Use two macro variables to replace <code>2023</code> and <code>2022</code>, respectively</li>
+</ul>
+<pre class="r"><code>%let curYr = 2023; /* current year */
+%let preYr = 2022; /* previous year */
+
+libname datalib &quot;P:\CH-Ranking\Data\&amp;curYr\2 Cleaned Data ready for Calculation or Verification\SAS data sets&quot;;
+libname geo &quot;P:\CH-Ranking\Data\&amp;curYr\2 Cleaned Data ready for Calculation or Verification&quot;;
+libname vintage &quot;P:\CH-Ranking\Data\&amp;preYr\2 Cleaned Data ready for Calculation or Verification&quot;;
+libname calcs &quot;P:\CH-Ranking\Data\&amp;curYr\3 Data calculated needs checking&quot;;</code></pre>
+<ul>
+<li>Note: Use double quotes!!</li>
+</ul>
+<hr />
+<div id="run-the-code-and-check-sas-log" class="section level3">
+<h3>Run the code and check SAS log</h3>
+<pre class="r"><code> 73         %let curYr = 2023; /* current year */
+ 74         %let preYr = 2022; /* previous year */
+ 75         
+ 76         libname datalib &quot;P:\CH-Ranking\Data\&amp;curYr\2 Cleaned Data ready for Calculation or
+ 76       ! Verification\SAS data sets&quot;;
+ NOTE: Libref DATALIB was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or 
+       Verification\SAS data sets 
+ 77         libname geo &quot;P:\CH-Ranking\Data\&amp;curYr\2 Cleaned Data ready for Calculation or
+ 77       ! Verification&quot;;
+ NOTE: Libref GEO was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification 
+ 78         libname vintage &quot;P:\CH-Ranking\Data\&amp;preYr\2 Cleaned Data ready for Calculation or
+ 78       ! Verification&quot;;
+ NOTE: Libref VINTAGE was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2022\2 Cleaned Data ready for Calculation or Verification 
+ 79         libname calcs &quot;P:\CH-Ranking\Data\&amp;curYr\3 Data calculated needs checking&quot;;
+ NOTE: Libref CALCS was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\3 Data calculated needs checking </code></pre>
+<hr />
+</div>
+<div id="use-one-macro-variable" class="section level3">
+<h3>Use one macro variable</h3>
+<ul>
+<li>%eval()</li>
+</ul>
+<pre class="r"><code>%let year = 2023;
+
+libname datalib &quot;P:\CH-Ranking\Data\&amp;year\2 Cleaned Data ready for Calculation or Verification\SAS data sets&quot;;
+libname geo &quot;P:\CH-Ranking\Data\&amp;year\2 Cleaned Data ready for Calculation or Verification&quot;;
+libname vintage &quot;P:\CH-Ranking\Data\%eval(&amp;year-1)\2 Cleaned Data ready for Calculation or Verification&quot;; 
+libname calcs &quot;P:\CH-Ranking\Data\&amp;year\3 Data calculated needs checking&quot;;</code></pre>
+<hr />
+</div>
+<div id="check-log" class="section level3">
+<h3>Check Log</h3>
+<pre class="r"><code> 73         %let year = 2023;
+ 74         
+ 75         libname datalib &quot;P:\CH-Ranking\Data\&amp;year\2 Cleaned Data ready for Calculation or
+ 75       ! Verification\SAS data sets&quot;;
+ NOTE: Libref DATALIB was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or 
+       Verification\SAS data sets
+ 76         libname geo &quot;P:\CH-Ranking\Data\&amp;year\2 Cleaned Data ready for Calculation or
+ 76       ! Verification&quot;;
+ NOTE: Libref GEO was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification
+ 77         libname vintage &quot;P:\CH-Ranking\Data\%eval(&amp;year-1)\2 Cleaned Data ready for Calculation
+ 77       !  or Verification&quot;;
+ NOTE: Libref VINTAGE was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2022\2 Cleaned Data ready for Calculation or Verification 
+ 78         libname calcs &quot;P:\CH-Ranking\Data\&amp;year\3 Data calculated needs checking&quot;;
+ NOTE: Libref CALCS was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\3 Data calculated needs checking</code></pre>
+<hr />
+<ul>
+<li>Simply using <strong>&amp;year-1</strong> won’t work</li>
+</ul>
+<pre class="r"><code>libname vintage &quot;P:\CH-Ranking\Data\&amp;year-1\2 Cleaned Data ready for Calculation or Verification&quot;; </code></pre>
+<hr />
+</div>
+</div>
+<div id="macros" class="section level2">
+<h2>Macros</h2>
+<ul>
+<li>Defining a Macro</li>
+</ul>
+<pre class="r"><code>%MACRO macro-name;
+  macro-text
+%MEND &lt;macro-name&gt;;</code></pre>
+<ul>
+<li>Calling a Macro</li>
+</ul>
+<pre class="r"><code>%macro-name</code></pre>
+<ul>
+<li>Example</li>
+</ul>
+<pre class="r"><code>%macro today;
+  %put Today is &amp;sysday &amp;sysdate9;
+%mend;
+
+%today</code></pre>
+<hr />
+<div id="macro-parameters" class="section level3">
+<h3>Macro Parameters</h3>
+<ul>
+<li>The ability to pass parameters to macros make them much more useful</li>
+</ul>
+<pre class="r"><code>%MACRO macro-name (parameter-list);
+ macro-text
+%MEND macro-name;</code></pre>
+<ul>
+<li>Positional parameters</li>
+</ul>
+<pre class="r"><code>%macro prnt(var, sum); 
+   proc print data = srhigh;
+      var &amp;var;
+      sum &amp;sum;
+   run;
+%mend prnt;</code></pre>
+<ul>
+<li>Keyword parameters</li>
+</ul>
+<pre class="r"><code>%macro finance(yvar = expenses, xvar = division); 
+   proc plot data = yearend;
+      plot &amp;yvar * &amp;xvar;
+   run;
+%mend finance;</code></pre>
+<ul>
+<li>Positional parameters must come before keyword parameters</li>
+</ul>
+<hr />
+</div>
+<div id="procedure-to-write-a-macro" class="section level3">
+<h3>Procedure to write a macro</h3>
+<ol style="list-style-type: decimal">
+<li><p>Start with a working SAS program</p></li>
+<li><p>Generalize with macro variables</p></li>
+<li><p>Create a macro</p></li>
+<li><p>Test</p></li>
+</ol>
+<hr />
+</div>
+</div>
+<div id="example-create-a-macro" class="section level2">
+<h2>Example: Create a macro</h2>
+<ul>
+<li><strong>v140</strong> Social Associations; data source: Census, County Business Patterns (CBP)</li>
+<li>Data link: <a href="https://www.census.gov/data/datasets/2020/econ/cbp/2020-cbp.html" class="uri">https://www.census.gov/data/datasets/2020/econ/cbp/2020-cbp.html</a></li>
+<li>Download “Complete County File”, “Complete State File”, “Complete U.S. File”</li>
+<li>Task: import three text files for county, state, and us, respectively</li>
+</ul>
+<hr />
+<div id="start-with-a-working-sas-program" class="section level3">
+<h3>Start with a working SAS program</h3>
+<pre class="r"><code>/* county data */
+PROC IMPORT
+  OUT = cbpcounties20 
+  DATAFILE = &quot;C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt&quot;
+  DBMS=dlm REPLACE; delimiter=&quot;,&quot;; getnames=yes; guessingrows=500;
+run;
+/* state data */
+PROC IMPORT
+  OUT= cbpstates20 
+  DATAFILE= &quot;C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20st.txt&quot;
+  DBMS=dlm REPLACE;delimiter=&quot;,&quot;; getnames=yes; guessingrows=500;
+run;
+/* us data */
+PROC IMPORT
+  OUT= cbpnational20 
+  DATAFILE= &quot;C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20us.txt&quot;
+  DBMS=dlm REPLACE; delimiter=&quot;,&quot;; getnames=yes; guessingrows=500;
+run;</code></pre>
+<ul>
+<li>The three Import procedures are different from two things: output data set and input file path</li>
+</ul>
+<hr />
+</div>
+<div id="generalize-with-macro-variables" class="section level3">
+<h3>Generalize with macro variables</h3>
+<pre class="r"><code>%let dataOut = cbpcounties20;
+%let filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt;
+
+PROC IMPORT
+  OUT= &amp;dataOut 
+  DATAFILE= &quot;&amp;filePath&quot; 
+  DBMS=dlm REPLACE; delimiter=&quot;,&quot;; getnames=yes; guessingrows=500;
+run;</code></pre>
+<hr />
+</div>
+<div id="create-a-macro" class="section level3">
+<h3>Create a macro</h3>
+<pre class="r"><code>%MACRO read_txt(dataOut=, filePath=);
+    PROC IMPORT
+    OUT = &amp;dataOut
+    DATAFILE = &quot;&amp;filePath&quot;
+    DBMS=dlm REPLACE; delimiter=&quot;,&quot;; getnames=yes; guessingrows=500;
+    run;
+%MEND read_txt;</code></pre>
+<ul>
+<li>Use macro</li>
+</ul>
+<pre class="r"><code>/* county data */
+%read_txt(dataOut = cbpcounties20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt);
+/* state data */
+%read_txt(dataOut = cbpstates20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20st.txt);
+/* us data */
+%read_txt(dataOut = cbpnational20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20us.txt);</code></pre>
+<hr />
+</div>
+<div id="test" class="section level3">
+<h3>Test</h3>
+<ul>
+<li>MPRNT
+<ul>
+<li><code>MPRINT</code> system option: print the resolved statements from macros in the SAS log.</li>
+<li>Can be very useful for debugging</li>
+</ul></li>
+</ul>
+<pre class="r"><code>/* Turn on: */
+OPTIONS MPRINT; 
+
+/* Turn off: */
+OPTIONS NOMPRINT;   </code></pre>
+<pre class="r"><code>options mprint;
+%read_txt(dataOut = cbpcounties20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt);</code></pre>
+<ul>
+<li>check SAS log:</li>
+</ul>
+<pre class="r"><code> 73         %read_txt(dataOut = cbpcounties20,
+ 74         filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt);
+ MPRINT(READ_TXT):   PROC IMPORT OUT = cbpcounties20 DATAFILE = 
+ &quot;C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt&quot; DBMS=dlm REPLACE;
+ MPRINT(READ_TXT):   ADLM;
+ MPRINT(READ_TXT):   delimiter=&quot;,&quot;;
+ MPRINT(READ_TXT):   getnames=yes;
+ MPRINT(READ_TXT):   guessingrows=500;
+ MPRINT(READ_TXT):   run;</code></pre>
+<ul>
+<li>Compare data sets obtained with and without using macro</li>
+</ul>
+<hr />
+</div>
+</div>
+<div id="example---another-look" class="section level2">
+<h2>Example - Another look</h2>
+<pre class="r"><code>/* county data */
+%read_txt( dataOut = cbpcounties20, 
+           filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt); 
+/* state data */
+%read_txt(dataOut = cbpstates20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20st.txt);
+/* us data */
+%read_txt(dataOut = cbpnational20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20us.txt);</code></pre>
+<ul>
+<li>“filePath”: too long :(</li>
+</ul>
+<div id="modified" class="section level3">
+<h3>Modified</h3>
+<pre class="r"><code>%let filDir = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\; 
+
+%MACRO read_txt2(dataOut=, fileName=);
+    PROC IMPORT
+    OUT = &amp;dataOut
+    DATAFILE = &quot;&amp;filDir.&amp;fileName..txt&quot; 
+    DBMS=dlm REPLACE; delimiter=&quot;,&quot;; getnames=yes;guessingrows=500;
+    run;
+%MEND read_txt2;</code></pre>
+<p>–</p>
+<pre class="r"><code>/* county data */
+%read_txt2(dataOut = cbpcounties20, fileName = cbp20co);
+/* state data */
+%read_txt2(dataOut = cbpstates20, fileName = cbp20st);
+/* us data */
+%read_txt(dataOut = cbpnational20, fileName = cbp20us);</code></pre>
+</div>
+</div>
+<div id="more-to-explore" class="section level2">
+<h2>More to explore …</h2>
+<ul>
+<li>Ways to make a macro available to current programs
+<ul>
+<li>to compile a macro and use it for current sessions</li>
+<li>to store it as snippet in SAS Studio</li>
+<li>to save it as a permanent macro and then use a <code>%INCLUDE</code> statement</li>
+<li>to call it through the autocall facility</li>
+<li>to store it as a compiled macro</li>
+</ul></li>
+<li>Conditional logic</li>
+</ul>
+<pre class="r"><code>        %IF condition %THEN %DO;
+         action;
+        %END;</code></pre>
+<ul>
+<li><p>Loops</p>
+<ul>
+<li><code>%do</code> loop</li>
+<li><code>%do … %while</code></li>
+<li><code>%do … %until</code></li>
+</ul></li>
+</ul>
+<pre class="r"><code>              %do i = 1% to 10; 
+                %put %eval(&amp;i**2);
+              %end;</code></pre>
+<ul>
+<li>……</li>
+</ul>
+<hr />
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<ul>
+<li><p><a href="https://myweb.uiowa.edu/pbreheny/misc/macros.pdf" class="uri">https://myweb.uiowa.edu/pbreheny/misc/macros.pdf</a></p></li>
+<li><p><a href="https://support.sas.com/resources/papers/proceedings/proceedings/sugi29/243-29.pdf" class="uri">https://support.sas.com/resources/papers/proceedings/proceedings/sugi29/243-29.pdf</a></p></li>
+<li><p><a href="https://www.listendata.com/2015/12/sas-macros-made-easy.html" class="uri">https://www.listendata.com/2015/12/sas-macros-made-easy.html</a></p></li>
+</ul>
+</div>

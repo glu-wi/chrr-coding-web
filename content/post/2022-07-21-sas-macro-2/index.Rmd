@@ -1,0 +1,391 @@
+---
+title: SAS Macro (2)
+author: ''
+date: '2022-07-21'
+slug: sas-macro-2
+categories:
+  - SAS
+tags:
+  - SAS Macro
+output:
+  blogdown::html_page:
+    toc: true
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Example: Create Macro Variable
+
+-   **v140** Social Associations
+  
+  -   Assign `Libref`'s
+```{r eval=FALSE, echo=TRUE}
+libname datalib 'P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification\SAS data sets';
+libname geo 'P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification';
+libname vintage 'P:\CH-Ranking\Data\2022\2 Cleaned Data ready for Calculation or Verification';
+libname calcs 'P:\CH-Ranking\Data\2023\3 Data calculated needs checking';
+```
+
+-   Use two macro variables to replace `2023` and `2022`, respectively
+```{r eval=FALSE, echo=TRUE}
+%let curYr = 2023; /* current year */
+%let preYr = 2022; /* previous year */
+
+libname datalib "P:\CH-Ranking\Data\&curYr\2 Cleaned Data ready for Calculation or Verification\SAS data sets";
+libname geo "P:\CH-Ranking\Data\&curYr\2 Cleaned Data ready for Calculation or Verification";
+libname vintage "P:\CH-Ranking\Data\&preYr\2 Cleaned Data ready for Calculation or Verification";
+libname calcs "P:\CH-Ranking\Data\&curYr\3 Data calculated needs checking";
+```
+
+-   Note: Use double quotes!!
+
+---
+
+### Run the code and check SAS log
+```{r eval=FALSE, echo=TRUE}
+ 73         %let curYr = 2023; /* current year */
+ 74         %let preYr = 2022; /* previous year */
+ 75         
+ 76         libname datalib "P:\CH-Ranking\Data\&curYr\2 Cleaned Data ready for Calculation or
+ 76       ! Verification\SAS data sets";
+ NOTE: Libref DATALIB was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or 
+       Verification\SAS data sets 
+ 77         libname geo "P:\CH-Ranking\Data\&curYr\2 Cleaned Data ready for Calculation or
+ 77       ! Verification";
+ NOTE: Libref GEO was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification 
+ 78         libname vintage "P:\CH-Ranking\Data\&preYr\2 Cleaned Data ready for Calculation or
+ 78       ! Verification";
+ NOTE: Libref VINTAGE was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2022\2 Cleaned Data ready for Calculation or Verification 
+ 79         libname calcs "P:\CH-Ranking\Data\&curYr\3 Data calculated needs checking";
+ NOTE: Libref CALCS was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\3 Data calculated needs checking 
+```
+
+---
+
+###   Use one macro variable
+  -   %eval()
+  
+```{r eval=FALSE, echo=TRUE}
+%let year = 2023;
+
+libname datalib "P:\CH-Ranking\Data\&year\2 Cleaned Data ready for Calculation or Verification\SAS data sets";
+libname geo "P:\CH-Ranking\Data\&year\2 Cleaned Data ready for Calculation or Verification";
+libname vintage "P:\CH-Ranking\Data\%eval(&year-1)\2 Cleaned Data ready for Calculation or Verification"; 
+libname calcs "P:\CH-Ranking\Data\&year\3 Data calculated needs checking";
+```
+
+---
+  
+### Check Log
+```{r eval=FALSE, echo=TRUE}
+ 73         %let year = 2023;
+ 74         
+ 75         libname datalib "P:\CH-Ranking\Data\&year\2 Cleaned Data ready for Calculation or
+ 75       ! Verification\SAS data sets";
+ NOTE: Libref DATALIB was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or 
+       Verification\SAS data sets
+ 76         libname geo "P:\CH-Ranking\Data\&year\2 Cleaned Data ready for Calculation or
+ 76       ! Verification";
+ NOTE: Libref GEO was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\2 Cleaned Data ready for Calculation or Verification
+ 77         libname vintage "P:\CH-Ranking\Data\%eval(&year-1)\2 Cleaned Data ready for Calculation
+ 77       !  or Verification";
+ NOTE: Libref VINTAGE was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2022\2 Cleaned Data ready for Calculation or Verification 
+ 78         libname calcs "P:\CH-Ranking\Data\&year\3 Data calculated needs checking";
+ NOTE: Libref CALCS was successfully assigned as follows: 
+       Engine:        V9 
+       Physical Name: P:\CH-Ranking\Data\2023\3 Data calculated needs checking
+
+```
+
+---
+
+-   Simply using **&year-1** won't work
+```{r eval=FALSE, echo=TRUE}
+libname vintage "P:\CH-Ranking\Data\&year-1\2 Cleaned Data ready for Calculation or Verification"; 
+```
+
+---
+
+## Macros
+-   Defining a Macro
+```{r eval=FALSE, echo=T}
+%MACRO macro-name;
+  macro-text
+%MEND <macro-name>;
+```
+
+-   Calling a Macro
+```{r eval=FALSE, echo=T}
+%macro-name
+```
+
+-   Example
+
+```{r eval=FALSE, echo=TRUE}
+%macro today;
+  %put Today is &sysday &sysdate9;
+%mend;
+
+%today
+```
+
+---
+
+### Macro Parameters
+
+-   The ability to pass parameters to macros make them much more useful
+```{r eval=FALSE, echo=TRUE}
+%MACRO macro-name (parameter-list);
+ macro-text
+%MEND macro-name;
+```
+
+- Positional parameters
+```{r eval=FALSE, echo=TRUE}
+%macro prnt(var, sum); 
+   proc print data = srhigh;
+      var &var;
+      sum &sum;
+   run;
+%mend prnt;
+```
+
+-   Keyword parameters
+```{r eval=FALSE, echo=TRUE}
+%macro finance(yvar = expenses, xvar = division); 
+   proc plot data = yearend;
+      plot &yvar * &xvar;
+   run;
+%mend finance;
+```
+
+-   Positional parameters must come before keyword parameters
+
+---
+
+### Procedure to write a macro
+
+1. Start with a working SAS program
+
+2. Generalize with macro variables
+
+3. Create a macro
+
+4. Test
+
+---
+
+## Example: Create a macro 
+-   **v140** Social Associations; data source: Census, County Business Patterns (CBP)
+-   Data link: https://www.census.gov/data/datasets/2020/econ/cbp/2020-cbp.html
+  -   Download "Complete County File", "Complete State File", "Complete U.S. File"
+-   Task: import three text files for county, state, and us, respectively
+
+---
+
+### Start with a working SAS program
+
+```{r eval=FALSE, echo=TRUE}
+/* county data */
+PROC IMPORT
+  OUT = cbpcounties20 
+  DATAFILE = "C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt"
+  DBMS=dlm REPLACE; delimiter=","; getnames=yes; guessingrows=500;
+run;
+/* state data */
+PROC IMPORT
+  OUT= cbpstates20 
+  DATAFILE= "C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20st.txt"
+  DBMS=dlm REPLACE;delimiter=","; getnames=yes; guessingrows=500;
+run;
+/* us data */
+PROC IMPORT
+  OUT= cbpnational20 
+  DATAFILE= "C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20us.txt"
+  DBMS=dlm REPLACE; delimiter=","; getnames=yes; guessingrows=500;
+run;
+```
+
+-   The three Import procedures are different from two things: output data set and input file path 
+
+---
+
+### Generalize with macro variables
+
+```{r eval=FALSE, echo=TRUE}
+%let dataOut = cbpcounties20;
+%let filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt;
+
+PROC IMPORT
+  OUT= &dataOut 
+  DATAFILE= "&filePath" 
+  DBMS=dlm REPLACE; delimiter=","; getnames=yes; guessingrows=500;
+run;
+```
+
+---
+
+### Create a macro
+
+```{r eval=FALSE, echo=TRUE}
+%MACRO read_txt(dataOut=, filePath=);
+	PROC IMPORT
+	OUT = &dataOut
+	DATAFILE = "&filePath"
+	DBMS=dlm REPLACE; delimiter=","; getnames=yes; guessingrows=500;
+	run;
+%MEND read_txt;
+```
+
+-   Use macro
+```{r eval=FALSE, echo=TRUE}
+/* county data */
+%read_txt(dataOut = cbpcounties20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt);
+/* state data */
+%read_txt(dataOut = cbpstates20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20st.txt);
+/* us data */
+%read_txt(dataOut = cbpnational20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20us.txt);
+```
+
+---
+
+### Test
+
+-   MPRNT 
+    -   `MPRINT` system option: print the resolved statements from macros in the SAS log. 
+    -   Can be very useful for debugging
+ 
+```{r eval=FALSE, echo=TRUE}
+/* Turn on: */
+OPTIONS MPRINT; 
+
+/* Turn off: */
+OPTIONS NOMPRINT;   
+```
+
+```{r eval=FALSE, echo=TRUE}
+options mprint;
+%read_txt(dataOut = cbpcounties20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt);
+```
+
+-   check SAS log:
+```{r eval=FALSE, echo=TRUE}
+ 73         %read_txt(dataOut = cbpcounties20,
+ 74         filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt);
+ MPRINT(READ_TXT):   PROC IMPORT OUT = cbpcounties20 DATAFILE = 
+ "C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt" DBMS=dlm REPLACE;
+ MPRINT(READ_TXT):   ADLM;
+ MPRINT(READ_TXT):   delimiter=",";
+ MPRINT(READ_TXT):   getnames=yes;
+ MPRINT(READ_TXT):   guessingrows=500;
+ MPRINT(READ_TXT):   run;
+```
+
+-   Compare data sets obtained with and without using macro
+
+---
+
+## Example - Another look
+```{r eval=FALSE, echo=TRUE}
+/* county data */
+%read_txt( dataOut = cbpcounties20, 
+           filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20co.txt); 
+/* state data */
+%read_txt(dataOut = cbpstates20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20st.txt);
+/* us data */
+%read_txt(dataOut = cbpnational20, 
+          filePath = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\cbp20us.txt);
+```
+
+-   "filePath": too long :(
+
+### Modified
+
+```{r eval=FALSE, echo=TRUE}
+%let filDir = C:\01_CHRR\SAS\CHR_Ranking_2023\v140_ini\raw\; 
+
+%MACRO read_txt2(dataOut=, fileName=);
+	PROC IMPORT
+	OUT = &dataOut
+	DATAFILE = "&filDir.&fileName..txt" 
+	DBMS=dlm REPLACE; delimiter=","; getnames=yes;guessingrows=500;
+	run;
+%MEND read_txt2;
+```
+
+--
+
+```{r eval=FALSE, echo=TRUE}
+/* county data */
+%read_txt2(dataOut = cbpcounties20, fileName = cbp20co);
+/* state data */
+%read_txt2(dataOut = cbpstates20, fileName = cbp20st);
+/* us data */
+%read_txt(dataOut = cbpnational20, fileName = cbp20us);
+```
+
+
+## More to explore ...
+-   Ways to make a macro available to current programs
+    -   to compile a macro and use it for current sessions
+    -   to store it as snippet in SAS Studio
+    -   to save it as a permanent macro and then use a `%INCLUDE` statement 
+    -   to call it through the autocall facility 
+    -   to store it as a compiled macro
+-   Conditional logic
+
+```{r eval=FALSE, echo=TRUE}
+        %IF condition %THEN %DO;
+         action;
+        %END;
+```
+
+-   Loops
+
+    -   `%do` loop
+    -   `%do … %while`
+    -   `%do … %until`
+```{r eval=FALSE, echo=TRUE}
+              %do i = 1% to 10; 
+                %put %eval(&i**2);
+              %end;
+
+        
+       
+```
+
+
+-   ......
+
+---
+
+## References
+
+-   https://myweb.uiowa.edu/pbreheny/misc/macros.pdf
+
+-   https://support.sas.com/resources/papers/proceedings/proceedings/sugi29/243-29.pdf
+
+-   https://www.listendata.com/2015/12/sas-macros-made-easy.html
