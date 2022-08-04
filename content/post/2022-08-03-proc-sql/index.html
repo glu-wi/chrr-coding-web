@@ -1,0 +1,441 @@
+---
+title: PROC SQL
+author: ''
+date: '2022-08-04'
+slug: proc-sql
+categories:
+  - SAS
+tags:
+  - PROC SQL
+output:
+  blogdown::html_page:
+    toc: true  
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+<script src="{{< blogdown/postref >}}index_files/kePrint/kePrint.js"></script>
+<link href="{{< blogdown/postref >}}index_files/lightable/lightable.css" rel="stylesheet" />
+
+<div id="TOC">
+<ul>
+<li><a href="#sql">SQL</a></li>
+<li><a href="#sql-query-basics">SQL query basics</a></li>
+<li><a href="#proc-sql">PROC SQL</a></li>
+<li><a href="#example-subset-variables-columns-select-obs.-rows">Example: Subset variables (columns) + Select obs. (rows)</a></li>
+<li><a href="#summary-functions">Summary functions</a></li>
+<li><a href="#sum-by-group">Sum by Group</a></li>
+<li><a href="#example-soccer-teams">Example: soccer teams</a>
+<ul>
+<li><a href="#some-queries">some queries</a></li>
+</ul></li>
+<li><a href="#create-table-from-a-query-result">Create table from a query result</a></li>
+<li><a href="#dictionary-tables">Dictionary Tables</a></li>
+<li><a href="#example-nchs-bridged-race-population-estimates">Example: NCHS Bridged-Race Population Estimates</a>
+<ul>
+<li><a href="#add-statecode-countycode-columns-assign-age-groups">Add <code>statecode</code>, <code>countycode</code> columns; assign age groups</a></li>
+<li><a href="#use-data-step">Use <code>DATA</code> step</a></li>
+<li><a href="#use-proc-sql">Use <code>PROC SQL</code></a></li>
+</ul></li>
+<li><a href="#more-to-explore">More to explore</a></li>
+</ul>
+</div>
+
+<div id="sql" class="section level2">
+<h2>SQL</h2>
+<ul>
+<li><p>Structured Query Language (SQL): a standardized language used to retrieve and update data stored in relational tables (or databases).(A relational database is a collection of tables)</p></li>
+<li><p>All the Relational Database Management Systems (RDMS) (e.g., Oracle, Microsoft SQL Server, MySQL, Postgres, SQL Server, etc.) use SQL as their standard database language</p></li>
+<li><p>A table in SQL is simply another term for a SAS data set</p></li>
+</ul>
+<table class=" lightable-paper lightable-hover" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:left;">
+SAS Term
+</th>
+<th style="text-align:left;">
+SQL Equivalent
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+Data set
+</td>
+<td style="text-align:left;">
+Table
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Observation
+</td>
+<td style="text-align:left;">
+Row
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+Variable
+</td>
+<td style="text-align:left;">
+Column
+</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>PROC SQL offers an alternative to the DATA step for querying and combining SAS data sets</li>
+</ul>
+</div>
+<div id="sql-query-basics" class="section level2">
+<h2>SQL query basics</h2>
+<ul>
+<li><p>Query: a request for information from a table or tables</p></li>
+<li><p>Query result: a report, another table, a view</p></li>
+<li><p>Example:</p>
+<p><strong><code>employee</code></strong> table</p></li>
+</ul>
+<table class=" lightable-paper lightable-hover" style="font-family: &quot;Arial Narrow&quot;, arial, helvetica, sans-serif; width: auto !important; margin-left: auto; margin-right: auto;">
+<thead>
+<tr>
+<th style="text-align:right;">
+ssn
+</th>
+<th style="text-align:left;">
+last_name
+</th>
+<th style="text-align:left;">
+first_name
+</th>
+<th style="text-align:left;">
+department
+</th>
+<th style="text-align:left;">
+salary
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:right;">
+666666666
+</td>
+<td style="text-align:left;">
+Smith
+</td>
+<td style="text-align:left;">
+Josh
+</td>
+<td style="text-align:left;">
+Admin
+</td>
+<td style="text-align:left;">
+50,000
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+222222222
+</td>
+<td style="text-align:left;">
+Ford
+</td>
+<td style="text-align:left;">
+Tom
+</td>
+<td style="text-align:left;">
+Marketing
+</td>
+<td style="text-align:left;">
+40,000
+</td>
+</tr>
+<tr>
+<td style="text-align:right;">
+333333333
+</td>
+<td style="text-align:left;">
+Grace
+</td>
+<td style="text-align:left;">
+Lily
+</td>
+<td style="text-align:left;">
+Database
+</td>
+<td style="text-align:left;">
+55,000
+</td>
+</tr>
+</tbody>
+</table>
+<p>I would like to <span class="math inline">\(\color{blue}{\text{SELECT}}\)</span> last name, department, and salary
+<span class="math inline">\(\color{blue}{\text{FROM}}\)</span> the employee table <span class="math inline">\(\color{blue}{\text{WHERE}}\)</span> the employee’s salary is greater than 45,000.</p>
+<pre class="r"><code>SELECT last_name, department, salary
+FROM employee
+WHERE salary&gt;45000;</code></pre>
+</div>
+<div id="proc-sql" class="section level2">
+<h2>PROC SQL</h2>
+<pre class="r"><code>PROC SQL;
+  ...
+
+QUIT;  </code></pre>
+<pre class="r"><code>PROC SQL; 
+  SELECT last_name, department, salary
+  FROM employee
+  WHERE salary&gt;45000;
+QUIT;  </code></pre>
+<ul>
+<li><strong>SELECT</strong> statement syntax</li>
+</ul>
+<pre class="r"><code>PROC SQL options;
+ SELECT column(s)
+   FROM table-name
+   WHERE expression
+   GROUP BY column(s)
+   HAVING expression
+   ORDER BY column(s);
+QUIT;  </code></pre>
+</div>
+<div id="example-subset-variables-columns-select-obs.-rows" class="section level2">
+<h2>Example: Subset variables (columns) + Select obs. (rows)</h2>
+<ul>
+<li>Overview of <em>sashelp.cars</em> data set</li>
+</ul>
+<pre class="r"><code>/* cars data set */
+proc print data = sashelp.cars;
+run;</code></pre>
+<ul>
+<li>Get a list of sports cars made by Audi; keep columns <code>Make</code>, <code>Model</code>, <code>Type</code>, <code>Origin</code>, <code>MSRP</code></li>
+</ul>
+<pre class="r"><code>/* Data Step */
+data audi_sports_cars; 
+set sashelp.cars;
+  where type = &quot;Sports&quot; and make = &quot;Audi&quot;;
+  keep Make Model Type Origin MSRP;
+run;</code></pre>
+<pre class="r"><code>/* PROC SQL */
+proc sql;
+    select Make, Model, Type, Origin, MSRP
+    from sashelp.cars
+    where type = &quot;Sports&quot; and make = &quot;Audi&quot;;
+quit;</code></pre>
+</div>
+<div id="summary-functions" class="section level2">
+<h2>Summary functions</h2>
+<ul>
+<li><p>AVG/MEAN</p></li>
+<li><p>COUNT/FREQ/N</p></li>
+<li><p>SUM</p></li>
+<li><p>MAX</p></li>
+<li><p>MIN</p></li>
+<li><p>NMISS</p></li>
+<li><p>STD</p></li>
+<li><p>VAR</p></li>
+<li><p>…</p></li>
+</ul>
+</div>
+<div id="sum-by-group" class="section level2">
+<h2>Sum by Group</h2>
+<ul>
+<li><code>group by</code> one column</li>
+</ul>
+<pre class="r"><code>proc sql;
+    select var1, sum(var2) as sum_var2
+    from my_data
+    group by var1;
+quit;</code></pre>
+<ul>
+<li><code>group by</code> multiple columns</li>
+</ul>
+<pre class="r"><code>proc sql;
+    select var1, var2, sum(var3) as sum_var3
+    from my_data
+    group by var1, var2;
+quit;</code></pre>
+</div>
+<div id="example-soccer-teams" class="section level2">
+<h2>Example: soccer teams</h2>
+<ul>
+<li>A table with goals scored by 12 players from two soccer teams</li>
+</ul>
+<pre class="r"><code>data have;
+    input id team $ position $ goals;
+    datalines;
+1 A Forward 15
+2 A Forward 12
+3 A Forward 29
+4 A Center 11
+5 A Center 9
+6 A Center 16
+7 B Forward 25
+8 B Forward 20
+9 B Forward 34
+10 B Center 19
+11 B Center 3
+12 B Center 8
+;
+run;</code></pre>
+<div id="some-queries" class="section level3">
+<h3>some queries</h3>
+<pre class="r"><code>/* total goals by both teams */
+proc sql;
+    select sum(goals) as sum_goals
+    from have;
+quit;</code></pre>
+<pre class="r"><code>/* goals by each team */
+proc sql;
+    select team, sum(goals) as sum_goals
+    from have
+    group by team; 
+quit;</code></pre>
+<pre class="r"><code>/* goals by team and position*/
+proc sql;
+    select team, position, sum(goals) as sum_goals
+    from have
+    group by team, position; 
+quit;</code></pre>
+<pre class="r"><code>/*calculate sum and avg of goals by team, grouped by team and position*/
+proc sql;
+    select team, position, sum(goals) as sum_goals, avg(goals) as avg_goals
+    from have
+    group by team, position;
+quit;
+    
+/* round to 1 decimal point */
+proc sql;
+    select team, position, sum(goals) as sum_goals, 
+            round(avg(goals), 0.1) as avg_goals
+    from have
+    group by team, position;
+quit;    </code></pre>
+<pre class="r"><code>/* find unique/distinct values within a column */
+proc sql;
+    select distinct team
+    from have;
+quit;</code></pre>
+</div>
+</div>
+<div id="create-table-from-a-query-result" class="section level2">
+<h2>Create table from a query result</h2>
+<pre class="r"><code>PROC SQL;
+CREATE TABLE table-name AS 
+  SELECT column(s)
+    FROM table-name
+    &lt;WHERE expression&gt;
+    ...;
+QUIT;</code></pre>
+<ul>
+<li>Example</li>
+</ul>
+<pre class="r"><code>/* create table: goals by team and position*/
+proc sql;
+create table want as 
+    select team, position, sum(goals) as sum_goals
+    from have
+    group by team, position;
+quit;</code></pre>
+</div>
+<div id="dictionary-tables" class="section level2">
+<h2>Dictionary Tables</h2>
+<ul>
+<li><p>DICTIONARY tables (views) have information related to currently defined libnames, table names, <strong>column names</strong> and attributes, formats, and so on.</p></li>
+<li><p><strong>Column names</strong>: <span class="math inline">\(\color{blue}{{SASHELP \rightarrow VCOLUMN}}\)</span></p></li>
+</ul>
+<pre class="r"><code>/* get column names within a table*/
+proc sql ;
+ create table dict_col as
+     select name
+     from dictionary.columns
+     where  libname = &#39;WORK&#39; 
+                and memname = &#39;ADD_DATA_SET_NAME_HERE&#39; 
+     order by name;
+quit;</code></pre>
+</div>
+<div id="example-nchs-bridged-race-population-estimates" class="section level2">
+<h2>Example: NCHS Bridged-Race Population Estimates</h2>
+<ul>
+<li><p>Estimates of resident population by year, county, single-year of age (0, 1, 2, …, 85 years and over), bridged-race category, Hispanic origin, and sex</p></li>
+<li><p><a href="https://www.cdc.gov/nchs/nvss/bridged_race/data_documentation.htm" class="uri">https://www.cdc.gov/nchs/nvss/bridged_race/data_documentation.htm</a></p></li>
+<li><p>Vintage 2020: <code>pcen_v2020_y20.sas7bdat.zip</code> (~22 MB)</p></li>
+<li><p>Goal: get county and state population under 75 by age groups of 10</p></li>
+</ul>
+<pre class="r"><code>libname pop &quot;C:\temp&quot;;
+data pop20; set pop.pcen_v2020_y20; run; </code></pre>
+<div id="add-statecode-countycode-columns-assign-age-groups" class="section level3">
+<h3>Add <code>statecode</code>, <code>countycode</code> columns; assign age groups</h3>
+<pre class="r"><code>data pop20_1 (drop=age st_fips co_fips); 
+set pop20 (keep=co_fips st_fips age pop);
+statecode = put(st_fips, z2.); 
+countycode = put(co_fips, z3.);
+if age&lt;75; /*Subset: keep rows with age &lt; 75 */
+if age=0 then age_cat=0;
+else if age&lt;=14 then age_cat=1;
+else if age&lt;=24 then age_cat=2;
+else if age&lt;=34 then age_cat=3;
+else if age&lt;=44 then age_cat=4;
+else if age&lt;=54 then age_cat=5;
+else if age&lt;=64 then age_cat=6;
+else if age&lt;=74 then age_cat=7;
+else age_cat=99;
+run;</code></pre>
+</div>
+<div id="use-data-step" class="section level3">
+<h3>Use <code>DATA</code> step</h3>
+<pre class="r"><code>/* pop by county and age_cat; data step */
+proc sort data=pop20_1; by statecode countycode age_cat; run;
+
+data pop_cnt; set pop20_1;
+by statecode countycode age_cat;
+if first.age_cat then pop_cnt = 0;  * (1) Initialization;
+pop_cnt + pop;                                * (2) Accumulation;
+if last.age_cat then output;            * (3) Output;
+drop pop;
+run;</code></pre>
+<pre class="r"><code>/* pop by state and age_cat */
+proc sort data=pop20_1; by statecode age_cat; run;
+
+data pop_st; set pop20_1;
+by statecode age_cat;
+if first.age_cat then pop_st = 0;   * (1) Initialization;
+pop_st + pop;                                   * (2) Accumulation;
+if last.age_cat then output;            * (3) Output;
+drop countycode pop;
+run;</code></pre>
+</div>
+<div id="use-proc-sql" class="section level3">
+<h3>Use <code>PROC SQL</code></h3>
+<pre class="r"><code>/* pop by county and age_cat; proc sql */
+proc sql;   
+create table pop20_cnt_sql as
+    select distinct statecode, countycode, age_cat, sum(pop) as pop
+    from pop20_1
+    group by statecode, countycode, age_cat;
+quit;</code></pre>
+<pre class="r"><code>/* pop by state and age_cat; proc sql */
+proc sql;   
+create table pop20_st_sql as
+    select distinct statecode, age_cat, sum(pop) as pop
+    from pop20_1
+    group by statecode, age_cat;    
+quit;</code></pre>
+</div>
+</div>
+<div id="more-to-explore" class="section level2">
+<h2>More to explore</h2>
+<ul>
+<li><p>CRUD (create, read, update, delete)</p></li>
+<li><p>SQL Joins: Inner Join, Left Join, Right Join, Full Join</p></li>
+<li><p>PROC SQL + SAS MACRO</p></li>
+<li><p>…</p></li>
+<li><p>References:</p></li>
+<li><p><a href="https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/sqlproc/titlepage.htm">SAS® 9.4 SQL Procedure User’s Guide</a></p></li>
+<li><p><a href="https://stats.oarc.ucla.edu/wp-content/uploads/2016/02/ad121.pdf">PROC SQL for DATA Step Die-Hards</a></p></li>
+<li><p><a href="https://stats.oarc.ucla.edu/wp-content/uploads/2016/02/bt082.pdf">AN INTRODUCTION TO THE SQL PROCEDURE</a></p></li>
+<li><p><a href="https://support.sas.com/resources/papers/proceedings/proceedings/sugi29/268-29.pdf">Introduction to Proc SQL</a></p></li>
+<li><p><a href="https://www.listendata.com/2014/04/proc-sql-select-statement.html">LESSON 1 : PROC SQL TUTORIAL FOR BEGINNERS (20 EXAMPLES)</a></p></li>
+</ul>
+</div>

@@ -1,0 +1,417 @@
+---
+title: PROC SQL
+author: ''
+date: '2022-08-04'
+slug: proc-sql
+categories:
+  - SAS
+tags:
+  - PROC SQL
+output:
+  blogdown::html_page:
+    toc: true  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(kableExtra)
+```
+
+## SQL
+
+-   Structured Query Language (SQL): a standardized language used to retrieve and update data stored in relational tables (or databases).(A relational database is a collection of tables)
+
+-   All the Relational Database Management Systems (RDMS) (e.g., Oracle, Microsoft SQL Server, MySQL, Postgres, SQL Server, etc.) use SQL as their standard database language
+
+-   A table in SQL is simply another term for a SAS data set
+
+```{r echo=FALSE, eval=TRUE}
+tibble("SAS Term" = c("Data set", "Observation", "Variable"),
+       "SQL Equivalent" = c("Table", "Row", "Column")) %>% 
+  kbl() %>%
+  kable_paper("hover", full_width = F)
+  # DT::datatable(rownames= FALSE,
+  #               options = list( 
+  #                 columnDefs = list(list(className = 'dt-center', targets = "_all"))
+  #           ))
+
+
+```
+
+-   PROC SQL offers an alternative to the DATA step for querying and combining SAS data sets
+
+## SQL query basics
+
+-   Query: a request for information from a table or tables
+
+-   Query result: a report, another table, a view
+
+-   Example:
+
+    **`employee`** table
+    
+```{r echo=FALSE, eval=TRUE}
+tibble("ssn" = c(666666666, 222222222, 333333333),
+       "last_name" = c("Smith", "Ford", "Grace"),
+       "first_name" = c("Josh", "Tom", "Lily"),
+       "department" = c('Admin', 'Marketing', 'Database'),
+       "salary" = c('50,000', "40,000", "55,000")) %>% 
+  kbl() %>%
+  kable_paper("hover", full_width = F)
+
+```
+
+
+I would like to $\color{blue}{\text{SELECT}}$ last name, department, and salary
+$\color{blue}{\text{FROM}}$ the employee table $\color{blue}{\text{WHERE}}$ the employee's salary is greater than 45,000.
+
+
+```{r echo=TRUE, eval=FALSE}
+SELECT last_name, department, salary
+FROM employee
+WHERE salary>45000;
+
+```
+
+
+## PROC SQL
+
+```{r echo=TRUE, eval=FALSE}
+PROC SQL;
+  ...
+
+QUIT;  
+
+```
+
+
+```{r echo=TRUE, eval=FALSE}
+PROC SQL; 
+  SELECT last_name, department, salary
+  FROM employee
+  WHERE salary>45000;
+QUIT;  
+
+```
+
+-   **SELECT** statement syntax
+
+```{r echo=TRUE, eval=FALSE}
+PROC SQL options;
+ SELECT column(s)
+   FROM table-name
+   WHERE expression
+   GROUP BY column(s)
+   HAVING expression
+   ORDER BY column(s);
+QUIT;  
+
+```
+
+
+## Example: Subset variables (columns) + Select obs. (rows)
+
+-   Overview of *sashelp.cars* data set
+
+```{r echo=TRUE, eval=FALSE}
+/* cars data set */
+proc print data = sashelp.cars;
+run;
+```
+
+
+-   Get a list of sports cars made by Audi; keep columns `Make`, `Model`, `Type`, `Origin`, `MSRP`
+
+```{r echo=TRUE, eval=FALSE}
+/* Data Step */
+data audi_sports_cars; 
+set sashelp.cars;
+  where type = "Sports" and make = "Audi";
+  keep Make Model Type Origin MSRP;
+run;
+```
+
+```{r echo=TRUE, eval=FALSE}
+/* PROC SQL */
+proc sql;
+	select Make, Model, Type, Origin, MSRP
+	from sashelp.cars
+	where type = "Sports" and make = "Audi";
+quit;
+```    
+
+
+## Summary functions
+
+-   AVG/MEAN
+
+-   COUNT/FREQ/N 
+
+-   SUM
+
+-   MAX 
+
+-   MIN 
+
+-   NMISS 
+
+-   STD 
+
+-   VAR
+
+-   ...
+
+
+## Sum by Group
+
+-   `group by` one column
+
+```{r eval=FALSE, echo=TRUE}
+proc sql;
+    select var1, sum(var2) as sum_var2
+    from my_data
+    group by var1;
+quit;
+```
+
+-   `group by` multiple columns
+
+```{r eval=FALSE, echo=TRUE}
+proc sql;
+    select var1, var2, sum(var3) as sum_var3
+    from my_data
+    group by var1, var2;
+quit;
+```
+
+## Example: soccer teams
+
+-   A table with goals scored by 12 players from two soccer teams
+
+```{r eval=FALSE, echo=TRUE}
+data have;
+    input id team $ position $ goals;
+    datalines;
+1 A Forward 15
+2 A Forward 12
+3 A Forward 29
+4 A Center 11
+5 A Center 9
+6 A Center 16
+7 B Forward 25
+8 B Forward 20
+9 B Forward 34
+10 B Center 19
+11 B Center 3
+12 B Center 8
+;
+run;
+```
+
+
+### some queries
+
+```{r eval=FALSE, echo=TRUE}
+/* total goals by both teams */
+proc sql;
+    select sum(goals) as sum_goals
+    from have;
+quit;
+```
+
+
+```{r eval=FALSE, echo=TRUE}
+/* goals by each team */
+proc sql;
+    select team, sum(goals) as sum_goals
+    from have
+    group by team; 
+quit;
+```
+
+
+```{r eval=FALSE, echo=TRUE}
+/* goals by team and position*/
+proc sql;
+    select team, position, sum(goals) as sum_goals
+    from have
+    group by team, position; 
+quit;
+```    
+
+
+```{r eval=FALSE, echo=TRUE}
+/*calculate sum and avg of goals by team, grouped by team and position*/
+proc sql;
+    select team, position, sum(goals) as sum_goals, avg(goals) as avg_goals
+    from have
+    group by team, position;
+quit;
+    
+/* round to 1 decimal point */
+proc sql;
+    select team, position, sum(goals) as sum_goals, 
+    		round(avg(goals), 0.1) as avg_goals
+    from have
+    group by team, position;
+quit;    
+
+```    
+
+
+```{r eval=FALSE, echo=TRUE}
+/* find unique/distinct values within a column */
+proc sql;
+    select distinct team
+    from have;
+quit;
+```   
+
+
+## Create table from a query result
+
+```{r eval=FALSE, echo=TRUE}
+PROC SQL;
+CREATE TABLE table-name AS 
+  SELECT column(s)
+    FROM table-name
+    <WHERE expression>
+    ...;
+QUIT;
+```
+
+-   Example
+
+```{r eval=FALSE, echo=TRUE}
+/* create table: goals by team and position*/
+proc sql;
+create table want as 
+    select team, position, sum(goals) as sum_goals
+    from have
+    group by team, position;
+quit;
+```
+
+## Dictionary Tables
+
+-   DICTIONARY tables (views) have information related to currently defined libnames, table names, **column names** and attributes, formats, and so on.
+
+
+-   **Column names**: $\color{blue}{{SASHELP \rightarrow VCOLUMN}}$
+
+```{r eval=FALSE, echo=TRUE}
+/* get column names within a table*/
+proc sql ;
+ create table dict_col as
+	 select name
+	 from dictionary.columns
+	 where 	libname = 'WORK' 
+	 		    and memname = 'ADD_DATA_SET_NAME_HERE' 
+	 order by name;
+quit;
+```
+
+## Example: NCHS Bridged-Race Population Estimates
+
+-   Estimates of resident population by year, county, single-year of age (0, 1, 2, ..., 85 years and over), bridged-race category, Hispanic origin, and sex
+
+-   https://www.cdc.gov/nchs/nvss/bridged_race/data_documentation.htm
+
+-   Vintage 2020: `pcen_v2020_y20.sas7bdat.zip` (~22 MB)
+
+-   Goal: get county and state population under 75 by age groups of 10 
+
+```{r eval=FALSE, echo=TRUE}
+libname pop "C:\temp";
+data pop20; set pop.pcen_v2020_y20; run; 
+```
+
+### Add `statecode`, `countycode` columns; assign age groups 
+
+```{r eval=FALSE, echo=TRUE}
+data pop20_1 (drop=age st_fips co_fips); 
+set pop20 (keep=co_fips st_fips age pop);
+statecode = put(st_fips, z2.); 
+countycode = put(co_fips, z3.);
+if age<75; /*Subset: keep rows with age < 75 */
+if age=0 then age_cat=0;
+else if age<=14 then age_cat=1;
+else if age<=24 then age_cat=2;
+else if age<=34 then age_cat=3;
+else if age<=44 then age_cat=4;
+else if age<=54 then age_cat=5;
+else if age<=64 then age_cat=6;
+else if age<=74 then age_cat=7;
+else age_cat=99;
+run;
+```
+
+###  Use `DATA` step
+
+```{r eval=FALSE, echo=TRUE}
+/* pop by county and age_cat; data step */
+proc sort data=pop20_1; by statecode countycode age_cat; run;
+
+data pop_cnt; set pop20_1;
+by statecode countycode age_cat;
+if first.age_cat then pop_cnt = 0;  * (1) Initialization;
+pop_cnt + pop;						          * (2) Accumulation;
+if last.age_cat then output;		    * (3) Output;
+drop pop;
+run;
+```
+
+```{r eval=FALSE, echo=TRUE}
+/* pop by state	and age_cat */
+proc sort data=pop20_1; by statecode age_cat; run;
+
+data pop_st; set pop20_1;
+by statecode age_cat;
+if first.age_cat then pop_st = 0;   * (1) Initialization;
+pop_st + pop;						            * (2) Accumulation;
+if last.age_cat then output;		    * (3) Output;
+drop countycode pop;
+run;
+```
+
+### Use `PROC SQL` 
+
+```{r eval=FALSE, echo=TRUE}
+/* pop by county and age_cat; proc sql */
+proc sql;	
+create table pop20_cnt_sql as
+	select distinct statecode, countycode, age_cat, sum(pop) as pop
+	from pop20_1
+	group by statecode, countycode, age_cat;
+quit;
+```
+
+```{r eval=FALSE, echo=TRUE}
+/* pop by state and age_cat; proc sql */
+proc sql;	
+create table pop20_st_sql as
+	select distinct statecode, age_cat, sum(pop) as pop
+	from pop20_1
+	group by statecode, age_cat;	
+quit;
+```
+
+## More to explore
+
+-   CRUD (create, read, update, delete)
+
+-   SQL Joins: Inner Join, Left Join, Right Join, Full Join
+
+-   PROC SQL + SAS MACRO
+
+-   ...
+
+-   References:
+
+  -   [SAS® 9.4 SQL Procedure User’s Guide](https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/sqlproc/titlepage.htm)
+  -   [PROC SQL for DATA Step Die-Hards](https://stats.oarc.ucla.edu/wp-content/uploads/2016/02/ad121.pdf)
+  -   [AN INTRODUCTION TO THE SQL PROCEDURE](https://stats.oarc.ucla.edu/wp-content/uploads/2016/02/bt082.pdf)
+  -   [Introduction to Proc SQL](https://support.sas.com/resources/papers/proceedings/proceedings/sugi29/268-29.pdf)
+  -   [LESSON 1 : PROC SQL TUTORIAL FOR BEGINNERS (20 EXAMPLES)](https://www.listendata.com/2014/04/proc-sql-select-statement.html)
