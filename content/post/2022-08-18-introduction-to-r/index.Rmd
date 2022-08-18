@@ -20,7 +20,7 @@ library(tidyverse)
 ```
 
 ## Demo
-
+Today is 08/18/2022
 -   Script
 -   R markdown
 -   [App](https://sites.google.com/view/ganhualu/kids-math) 
