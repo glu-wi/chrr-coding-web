@@ -1,0 +1,212 @@
+---
+title: Introduction to R
+author: ''
+date: '2022-08-18'
+slug: introduction-to-r
+categories:
+  - R
+tags: []
+output:
+  blogdown::html_page:
+    toc: true 
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+# library(webshot)
+```
+
+## Demo
+
+-   Script
+-   R markdown
+-   [App](https://sites.google.com/view/ganhualu/kids-math) 
+
+## Plan
+
+-   General introduction
+-   Styles
+-   Visualization
+-   R markdown
+-   Git
+
+## Why R?
+
+-   Programming language developed by statisticians for data analysis
+
+-   Free and open-source
+
+-   Easy to get help: A large, growing, and active community of R users
+
+-   Numerous resources for learning and asking questions
+
+-   Excellent graphics and visualization tools, *even dynamic* <span style="color:blue">Shiny</span>
+
+-   Broad range of data analysis tools/packages
+
+-   Easy to generate reproducible reports
+
+-   Easy to integrate with other tools
+
+## The R console
+
+-   Basic interaction with R is through typing in the **console**
+-   This is the **terminal** or **command-line** interface
+
+```{r echo=FALSE, out.width = '80%'}
+knitr::include_graphics("images/r_console.png")
+```
+
+<span style="color:blue">RStudio</span> is highly recommended
+
+1.   Download R: https://cran.r-project.org/
+2.   Then download RStudio: http://www.rstudio.com/
+
+## RStudio is an IDE for R
+
+RStudio has 4 main windows (i.e., 'panes'):
+
+-   **Source** 
+-   **Console/Terminal/Render/Jobs** 
+-   **Environment/History** 
+-   **Files/Plots/Packages/Help/Viewer**
+
+```{r, out.width = '100%', echo = FALSE}
+knitr::include_graphics("images/rstudio_panes.png")
+```
+
+
+## Styles/Dialects/Fashions/Flavors/Syntaxes
+
+-   **Base R**: what you get when you open up R for the first time; stable
+
+-   **Tidyverse**: readability and flexibility
+
+-   **data.table**: fast and concise
+
+## Base R vs Tidyverse
+
+-   `gapminder` dataset
+
+```{r eval=TRUE, warning=FALSE}
+library(gapminder)
+dim(gapminder)
+head(gapminder)
+glimpse(gapminder)
+```
+
+-   subset rows for United States - base R:
+
+```{r eval=TRUE}
+gapminder[gapminder$country == "United States", ]
+subset(gapminder, country == "United States")
+```
+
+-   tidyverse
+```{r eval=TRUE}
+gapminder %>% filter(country == "United States")
+```
+
+## Piping
+
+-   tidyverse pipe: <span style="color:blue">%>%</span> 
+
+-   native pipe (since R4.1.0): <span style="color:blue">|></span> 
+
+-   Enables *chaining*: the output of a previous function becomes the first argument of the next function
+
+-   Example: sort continents by their total population in 2007
+
+```{r eval=TRUE}
+gapminder %>%
+  filter(year == 2007) %>%
+  group_by(continent) %>%
+  summarise(totalPop = sum(pop)) %>%
+  arrange(desc(totalPop))
+```
+  -   `gapminder` dataset 
+  -   $\to$ **then** filter rows for year 2007 
+  -   $\to$ **then** group rows by continent 
+  -   $\to$ **then** summarize population for each continent 
+  -   $\to$ **then** arrange rows with descending total population
+
+## Assignment operator
+
+Most variables are created with the **assignment operator**, `<-` or `=`
+
+```{r}
+x <- 3
+print(x)
+x = 3
+print(x)
+```
+
+-   there are [differences](https://stackoverflow.com/questions/1741820/what-are-the-differences-between-and-assignment-operators)
+
+-   short-cut for `<-`: 
+      
+      `Alt` + `-` in RStudio
+
+## ggplot2
+
+-   boxplot:  distributions of life expectancy by continent
+
+```{r eval=TRUE}
+gapminder %>% 
+  mutate(continent = reorder(continent, lifeExp, FUN=median)) %>%
+  ggplot(aes(x=continent, y=lifeExp, fill=continent)) +
+  geom_boxplot(outlier.size=2)
+```
+
+-   line/point plot
+
+```{r eval=TRUE}
+gapminder %>%
+  group_by(continent, year) %>%
+  summarise(lifeExp=median(lifeExp)) %>%
+  ggplot(aes(x=year, y=lifeExp, color=continent)) +
+  geom_line(size=1) + 
+  geom_point(size=1.5) +
+  geom_smooth(aes(fill=continent), method="lm")
+```
+
+[source](http://euclid.psych.yorku.ca/www/psy6135/tutorials/gapminder.html)
+
+## R Markdown
+
+- Allows the user to integrate R code into a report
+
+- When data changes or code changes, so does the report
+
+- No need to copy-and-paste graphics, tables, or numbers
+
+- Creates __reproducible__ reports
+  - Anyone who has your R Markdown (.Rmd) file and input data can re-run your analysis and get the exact same results (tables, figures, summaries)
+  
+- Can output report in HTML (default), Microsoft Word, or PDF
+
+## Git
+
+-   [Happy Git and GitHub for the useR](https://happygitwithr.com/index.html)
+
+-   [Excuse me, do you have a moment to talk about version control?](https://peerj.com/preprints/3159v2/)
+
+## Install R and RStudio
+
+[Hands-On Programming with R](https://rstudio-education.github.io/hopr/starting.html)
+
+## Resources
+
+-   [R for Data Science](https://r4ds.had.co.nz/)
+-   [R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/)
+-   [ggplot2: Elegant Graphics for Data Analysis](https://ggplot2-book.org/)
+-   [Mastering Shiny](https://mastering-shiny.org/)
+-   [Analyzing US Census Data: Methods, Maps, and Models in R](https://walker-data.com/census-r/index.html)
+-   [R for Epidemiology](https://www.r4epi.com/)
+-   [Big Book of R](https://www.bigbookofr.com/index.html)
+-   [Reproducible Research with R and RStudio](https://github.com/christophergandrud/Rep-Res-Book/tree/master/rep-res-3rd-edition)
+-   [Project-oriented workflow](https://www.tidyverse.org/blog/2017/12/workflow-vs-script/)
+-   ......

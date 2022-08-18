@@ -1,0 +1,288 @@
+---
+title: Introduction to R
+author: ''
+date: '2022-08-18'
+slug: introduction-to-r
+categories:
+  - R
+tags: []
+output:
+  blogdown::html_page:
+    toc: true 
+---
+
+<script src="{{< blogdown/postref >}}index_files/header-attrs/header-attrs.js"></script>
+
+<div id="TOC">
+<ul>
+<li><a href="#demo">Demo</a></li>
+<li><a href="#plan">Plan</a></li>
+<li><a href="#why-r">Why R?</a></li>
+<li><a href="#the-r-console">The R console</a></li>
+<li><a href="#rstudio-is-an-ide-for-r">RStudio is an IDE for R</a></li>
+<li><a href="#stylesdialectsfashionsflavorssyntaxes">Styles/Dialects/Fashions/Flavors/Syntaxes</a></li>
+<li><a href="#base-r-vs-tidyverse">Base R vs Tidyverse</a></li>
+<li><a href="#piping">Piping</a></li>
+<li><a href="#assignment-operator">Assignment operator</a></li>
+<li><a href="#ggplot2">ggplot2</a></li>
+<li><a href="#r-markdown">R Markdown</a></li>
+<li><a href="#git">Git</a></li>
+<li><a href="#install-r-and-rstudio">Install R and RStudio</a></li>
+<li><a href="#resources">Resources</a></li>
+</ul>
+</div>
+
+<div id="demo" class="section level2">
+<h2>Demo</h2>
+<ul>
+<li>Script</li>
+<li>R markdown</li>
+<li><a href="https://sites.google.com/view/ganhualu/kids-math">App</a></li>
+</ul>
+</div>
+<div id="plan" class="section level2">
+<h2>Plan</h2>
+<ul>
+<li>General introduction</li>
+<li>Styles</li>
+<li>Visualization</li>
+<li>R markdown</li>
+<li>Git</li>
+</ul>
+</div>
+<div id="why-r" class="section level2">
+<h2>Why R?</h2>
+<ul>
+<li><p>Programming language developed by statisticians for data analysis</p></li>
+<li><p>Free and open-source</p></li>
+<li><p>Easy to get help: A large, growing, and active community of R users</p></li>
+<li><p>Numerous resources for learning and asking questions</p></li>
+<li><p>Excellent graphics and visualization tools, <em>even dynamic</em> <span style="color:blue">Shiny</span></p></li>
+<li><p>Broad range of data analysis tools/packages</p></li>
+<li><p>Easy to generate reproducible reports</p></li>
+<li><p>Easy to integrate with other tools</p></li>
+</ul>
+</div>
+<div id="the-r-console" class="section level2">
+<h2>The R console</h2>
+<ul>
+<li>Basic interaction with R is through typing in the <strong>console</strong></li>
+<li>This is the <strong>terminal</strong> or <strong>command-line</strong> interface</li>
+</ul>
+<p><img src="images/r_console.PNG" width="80%" /></p>
+<p><span style="color:blue">RStudio</span> is highly recommended</p>
+<ol style="list-style-type: decimal">
+<li>Download R: <a href="https://cran.r-project.org/" class="uri">https://cran.r-project.org/</a></li>
+<li>Then download RStudio: <a href="http://www.rstudio.com/" class="uri">http://www.rstudio.com/</a></li>
+</ol>
+</div>
+<div id="rstudio-is-an-ide-for-r" class="section level2">
+<h2>RStudio is an IDE for R</h2>
+<p>RStudio has 4 main windows (i.e., ‘panes’):</p>
+<ul>
+<li><strong>Source</strong></li>
+<li><strong>Console/Terminal/Render/Jobs</strong></li>
+<li><strong>Environment/History</strong></li>
+<li><strong>Files/Plots/Packages/Help/Viewer</strong></li>
+</ul>
+<p><img src="images/rstudio_panes.PNG" width="100%" /></p>
+</div>
+<div id="stylesdialectsfashionsflavorssyntaxes" class="section level2">
+<h2>Styles/Dialects/Fashions/Flavors/Syntaxes</h2>
+<ul>
+<li><p><strong>Base R</strong>: what you get when you open up R for the first time; stable</p></li>
+<li><p><strong>Tidyverse</strong>: readability and flexibility</p></li>
+<li><p><strong>data.table</strong>: fast and concise</p></li>
+</ul>
+</div>
+<div id="base-r-vs-tidyverse" class="section level2">
+<h2>Base R vs Tidyverse</h2>
+<ul>
+<li><code>gapminder</code> dataset</li>
+</ul>
+<pre class="r"><code>library(gapminder)
+dim(gapminder)</code></pre>
+<pre><code>## [1] 1704    6</code></pre>
+<pre class="r"><code>head(gapminder)</code></pre>
+<pre><code>## # A tibble: 6 x 6
+##   country     continent  year lifeExp      pop gdpPercap
+##   &lt;fct&gt;       &lt;fct&gt;     &lt;int&gt;   &lt;dbl&gt;    &lt;int&gt;     &lt;dbl&gt;
+## 1 Afghanistan Asia       1952    28.8  8425333      779.
+## 2 Afghanistan Asia       1957    30.3  9240934      821.
+## 3 Afghanistan Asia       1962    32.0 10267083      853.
+## 4 Afghanistan Asia       1967    34.0 11537966      836.
+## 5 Afghanistan Asia       1972    36.1 13079460      740.
+## 6 Afghanistan Asia       1977    38.4 14880372      786.</code></pre>
+<pre class="r"><code>glimpse(gapminder)</code></pre>
+<pre><code>## Rows: 1,704
+## Columns: 6
+## $ country   &lt;fct&gt; &quot;Afghanistan&quot;, &quot;Afghanistan&quot;, &quot;Afghanistan&quot;, &quot;Afghanistan&quot;, ~
+## $ continent &lt;fct&gt; Asia, Asia, Asia, Asia, Asia, Asia, Asia, Asia, Asia, Asia, ~
+## $ year      &lt;int&gt; 1952, 1957, 1962, 1967, 1972, 1977, 1982, 1987, 1992, 1997, ~
+## $ lifeExp   &lt;dbl&gt; 28.801, 30.332, 31.997, 34.020, 36.088, 38.438, 39.854, 40.8~
+## $ pop       &lt;int&gt; 8425333, 9240934, 10267083, 11537966, 13079460, 14880372, 12~
+## $ gdpPercap &lt;dbl&gt; 779.4453, 820.8530, 853.1007, 836.1971, 739.9811, 786.1134, ~</code></pre>
+<ul>
+<li>subset rows for United States - base R:</li>
+</ul>
+<pre class="r"><code>gapminder[gapminder$country == &quot;United States&quot;, ]</code></pre>
+<pre><code>## # A tibble: 12 x 6
+##    country       continent  year lifeExp       pop gdpPercap
+##    &lt;fct&gt;         &lt;fct&gt;     &lt;int&gt;   &lt;dbl&gt;     &lt;int&gt;     &lt;dbl&gt;
+##  1 United States Americas   1952    68.4 157553000    13990.
+##  2 United States Americas   1957    69.5 171984000    14847.
+##  3 United States Americas   1962    70.2 186538000    16173.
+##  4 United States Americas   1967    70.8 198712000    19530.
+##  5 United States Americas   1972    71.3 209896000    21806.
+##  6 United States Americas   1977    73.4 220239000    24073.
+##  7 United States Americas   1982    74.6 232187835    25010.
+##  8 United States Americas   1987    75.0 242803533    29884.
+##  9 United States Americas   1992    76.1 256894189    32004.
+## 10 United States Americas   1997    76.8 272911760    35767.
+## 11 United States Americas   2002    77.3 287675526    39097.
+## 12 United States Americas   2007    78.2 301139947    42952.</code></pre>
+<pre class="r"><code>subset(gapminder, country == &quot;United States&quot;)</code></pre>
+<pre><code>## # A tibble: 12 x 6
+##    country       continent  year lifeExp       pop gdpPercap
+##    &lt;fct&gt;         &lt;fct&gt;     &lt;int&gt;   &lt;dbl&gt;     &lt;int&gt;     &lt;dbl&gt;
+##  1 United States Americas   1952    68.4 157553000    13990.
+##  2 United States Americas   1957    69.5 171984000    14847.
+##  3 United States Americas   1962    70.2 186538000    16173.
+##  4 United States Americas   1967    70.8 198712000    19530.
+##  5 United States Americas   1972    71.3 209896000    21806.
+##  6 United States Americas   1977    73.4 220239000    24073.
+##  7 United States Americas   1982    74.6 232187835    25010.
+##  8 United States Americas   1987    75.0 242803533    29884.
+##  9 United States Americas   1992    76.1 256894189    32004.
+## 10 United States Americas   1997    76.8 272911760    35767.
+## 11 United States Americas   2002    77.3 287675526    39097.
+## 12 United States Americas   2007    78.2 301139947    42952.</code></pre>
+<ul>
+<li>tidyverse</li>
+</ul>
+<pre class="r"><code>gapminder %&gt;% filter(country == &quot;United States&quot;)</code></pre>
+<pre><code>## # A tibble: 12 x 6
+##    country       continent  year lifeExp       pop gdpPercap
+##    &lt;fct&gt;         &lt;fct&gt;     &lt;int&gt;   &lt;dbl&gt;     &lt;int&gt;     &lt;dbl&gt;
+##  1 United States Americas   1952    68.4 157553000    13990.
+##  2 United States Americas   1957    69.5 171984000    14847.
+##  3 United States Americas   1962    70.2 186538000    16173.
+##  4 United States Americas   1967    70.8 198712000    19530.
+##  5 United States Americas   1972    71.3 209896000    21806.
+##  6 United States Americas   1977    73.4 220239000    24073.
+##  7 United States Americas   1982    74.6 232187835    25010.
+##  8 United States Americas   1987    75.0 242803533    29884.
+##  9 United States Americas   1992    76.1 256894189    32004.
+## 10 United States Americas   1997    76.8 272911760    35767.
+## 11 United States Americas   2002    77.3 287675526    39097.
+## 12 United States Americas   2007    78.2 301139947    42952.</code></pre>
+</div>
+<div id="piping" class="section level2">
+<h2>Piping</h2>
+<ul>
+<li><p>tidyverse pipe: <span style="color:blue">%&gt;%</span></p></li>
+<li><p>native pipe (since R4.1.0): <span style="color:blue">|&gt;</span></p></li>
+<li><p>Enables <em>chaining</em>: the output of a previous function becomes the first argument of the next function</p></li>
+<li><p>Example: sort continents by their total population in 2007</p></li>
+</ul>
+<pre class="r"><code>gapminder %&gt;%
+  filter(year == 2007) %&gt;%
+  group_by(continent) %&gt;%
+  summarise(totalPop = sum(pop)) %&gt;%
+  arrange(desc(totalPop))</code></pre>
+<pre><code>## # A tibble: 5 x 2
+##   continent   totalPop
+##   &lt;fct&gt;          &lt;dbl&gt;
+## 1 Asia      3811953827
+## 2 Africa     929539692
+## 3 Americas   898871184
+## 4 Europe     586098529
+## 5 Oceania     24549947</code></pre>
+<ul>
+<li><code>gapminder</code> dataset</li>
+<li><span class="math inline">\(\to\)</span> <strong>then</strong> filter rows for year 2007</li>
+<li><span class="math inline">\(\to\)</span> <strong>then</strong> group rows by continent</li>
+<li><span class="math inline">\(\to\)</span> <strong>then</strong> summarize population for each continent</li>
+<li><span class="math inline">\(\to\)</span> <strong>then</strong> arrange rows with descending total population</li>
+</ul>
+</div>
+<div id="assignment-operator" class="section level2">
+<h2>Assignment operator</h2>
+<p>Most variables are created with the <strong>assignment operator</strong>, <code>&lt;-</code> or <code>=</code></p>
+<pre class="r"><code>x &lt;- 3
+print(x)</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre class="r"><code>x = 3
+print(x)</code></pre>
+<pre><code>## [1] 3</code></pre>
+<ul>
+<li><p>there are <a href="https://stackoverflow.com/questions/1741820/what-are-the-differences-between-and-assignment-operators">differences</a></p></li>
+<li><p>short-cut for <code>&lt;-</code>:</p>
+<p><code>Alt</code> + <code>-</code> in RStudio</p></li>
+</ul>
+</div>
+<div id="ggplot2" class="section level2">
+<h2>ggplot2</h2>
+<ul>
+<li>boxplot: distributions of life expectancy by continent</li>
+</ul>
+<pre class="r"><code>gapminder %&gt;% 
+  mutate(continent = reorder(continent, lifeExp, FUN=median)) %&gt;%
+  ggplot(aes(x=continent, y=lifeExp, fill=continent)) +
+  geom_boxplot(outlier.size=2)</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<ul>
+<li>line/point plot</li>
+</ul>
+<pre class="r"><code>gapminder %&gt;%
+  group_by(continent, year) %&gt;%
+  summarise(lifeExp=median(lifeExp)) %&gt;%
+  ggplot(aes(x=year, y=lifeExp, color=continent)) +
+  geom_line(size=1) + 
+  geom_point(size=1.5) +
+  geom_smooth(aes(fill=continent), method=&quot;lm&quot;)</code></pre>
+<pre><code>## `summarise()` has grouped output by &#39;continent&#39;. You can override using the
+## `.groups` argument.
+## `geom_smooth()` using formula &#39;y ~ x&#39;</code></pre>
+<p><img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p><a href="http://euclid.psych.yorku.ca/www/psy6135/tutorials/gapminder.html">source</a></p>
+</div>
+<div id="r-markdown" class="section level2">
+<h2>R Markdown</h2>
+<ul>
+<li><p>Allows the user to integrate R code into a report</p></li>
+<li><p>When data changes or code changes, so does the report</p></li>
+<li><p>No need to copy-and-paste graphics, tables, or numbers</p></li>
+<li><p>Creates <strong>reproducible</strong> reports</p>
+<ul>
+<li>Anyone who has your R Markdown (.Rmd) file and input data can re-run your analysis and get the exact same results (tables, figures, summaries)</li>
+</ul></li>
+<li><p>Can output report in HTML (default), Microsoft Word, or PDF</p></li>
+</ul>
+</div>
+<div id="git" class="section level2">
+<h2>Git</h2>
+<ul>
+<li><p><a href="https://happygitwithr.com/index.html">Happy Git and GitHub for the useR</a></p></li>
+<li><p><a href="https://peerj.com/preprints/3159v2/">Excuse me, do you have a moment to talk about version control?</a></p></li>
+</ul>
+</div>
+<div id="install-r-and-rstudio" class="section level2">
+<h2>Install R and RStudio</h2>
+<p><a href="https://rstudio-education.github.io/hopr/starting.html">Hands-On Programming with R</a></p>
+</div>
+<div id="resources" class="section level2">
+<h2>Resources</h2>
+<ul>
+<li><a href="https://r4ds.had.co.nz/">R for Data Science</a></li>
+<li><a href="https://bookdown.org/yihui/rmarkdown/">R Markdown: The Definitive Guide</a></li>
+<li><a href="https://ggplot2-book.org/">ggplot2: Elegant Graphics for Data Analysis</a></li>
+<li><a href="https://mastering-shiny.org/">Mastering Shiny</a></li>
+<li><a href="https://walker-data.com/census-r/index.html">Analyzing US Census Data: Methods, Maps, and Models in R</a></li>
+<li><a href="https://www.r4epi.com/">R for Epidemiology</a></li>
+<li><a href="https://www.bigbookofr.com/index.html">Big Book of R</a></li>
+<li><a href="https://github.com/christophergandrud/Rep-Res-Book/tree/master/rep-res-3rd-edition">Reproducible Research with R and RStudio</a></li>
+<li><a href="https://www.tidyverse.org/blog/2017/12/workflow-vs-script/">Project-oriented workflow</a></li>
+<li>……</li>
+</ul>
+</div>
