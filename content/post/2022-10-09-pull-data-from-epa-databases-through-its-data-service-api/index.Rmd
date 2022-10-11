@@ -1,0 +1,206 @@
+---
+title: Pull Data Using EPA's Data Service API
+author: ''
+date: '2022-10-08'
+slug: pull-data-from-epa-databases-through-its-data-service-api
+categories:
+  - API
+  - R
+tags:
+  - API
+output:
+  blogdown::html_page:
+    toc: true    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(kableExtra)
+
+print_kbl <- function(df){
+  df %>% 
+    kbl() %>% 
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+}
+```
+
+# Introduction
+
+EPA's [Envirofacts Data Service API](https://www.epa.gov/enviro/envirofacts-data-service-api) provides access to its databases, including Safe Drinking Water Information System (SDWIS). We use data from SDWIS to calculate a measure (i.e., Drinking Water Violations) for CHRR rankings. We usually download data from SDWIS website for the previous year when data available in SDWIS is up to Quarter 3 of current year. For example, when SDWIS data is available up to 2022 quarter 3, we extract data for 01-JAN-2021 to 31-DEC-2021. In this post, I will show how we can use API to pull data from SDWIS. 
+
+# SDWIS tables
+
+SDWIS has nine tables (see [SDWIS model](https://www.epa.gov/enviro/sdwis-model)), and we need data from two tables - `VIOLATION` and `GEOGRAPHIC_AREA`. I will only discuss `VIOLATION` table in this post. 
+
+There are 34 columns in `VIOLATION` table. We need to know a few of them before pulling data: 
+
+-   `PWS_TYPE_CODE`: A system-generated coded value which classifies the water system according to federal requirements. It includes Community Water Systems (CWS), Non-Transient Non-Community Water Systems (NTNCWS), and Transient Non-Community Water Systems (TNCWS). We need to set this to be `CWS`.
+-   `IS_HEALTH_BASED_IND`: Indicates if this is a health based violation (Y) or not (N). We need to set this to be `Y`, i.e., Yes
+-   `COMPL_PER_BEGIN_DATE`: Compliance Period Begin Date - represents the beginning of a period of time when a public water system was in violation of a primary drinking water regulation. **Note**: `COMPL_PER_BEGIN_DATE` is a specific date, not a range; if we set  COMPL_PER_BEGIN_DATE to be "01-JAN-21", we get all violations on the date 01-JAN-21. To get violation data for one year, one way is to pull data for each day of the year and then assemble data together; another way is to extract all available data first and then subset based on the time range we need.
+-   `PWS_ACTIVITY_CODE`: Code that indicates the activity status of the public water system. The default for API is all systems, which is different from EPA's web search default (active). Thus, for API data extraction, we do not need to specify `PWS_ACTIVITY_CODE`.
+
+# Pull data from SDWIS
+
+## Construct a URL
+
+The key to pulling data via data API is to construct a URL (Uniform Resource Locators), or a link, with a specific set of parameters (i.e., set up conditions for columns). For example, the following URL can help us pull first 20 rows of violation data in CSV format that are health based, for CWS water systems, and on date 01-JAN-20:
+
+"https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/01-JAN-20/CSV/rows/0:19"
+
+We can break up the URL into a few pieces and see what they mean.
+
+```{r echo=FALSE, fig.cap="", out.width = '100%'}
+knitr::include_graphics("images/sdwis_url_example.png")
+```
+
+-   1:   Address to EPA data API
+
+-   2:   Table name: VIOLATION
+
+-   3-7:   specify parameters
+
+    * 3: set `PWS_TYPE_CODE` = `CWS`
+    
+    * 4: set `IS_HEALTH_BASED_IND` = `Y`
+    
+    * 5: set `COMPL_PER_BEGIN_DATE` = `01-JAN-20`
+    
+    * 6: set output data file type as `CSV`. This is optional. If not specified, the defualt is XML. We can also choose the output format as `JSON` or `Excel`.
+    
+    * 7: select first 20 rows `rows` = `0:19` (row number starts at 0). This is also optional. However, the output is limited to 10000 rows at a time. So, we are fine without specifying rows if the data has less than 10000 rows. But it is a good idea to know how many rows in the data we want to extract and decide if we need to specify rows. 
+
+## Ways to extract data
+
+-   The Simplest way to pull data is just to copy the link and paste it in a web browser (e.g., Google Chrome) and hit "enter" key. And be patient if you are pulling a large data set, because the web browser may show nothing after you clicked "enter". This way is simple, but it may not be very reproducible. We may make and edit the URL in Word, since we need to specify a few parameters. Then copy the URL and paste it to Chrome. When we get the csv file, we will process it in SAS, Excel, or other software. So, we need to work at various places, i.e. using different software during the process. 
+
+-   Another way is to write a piece code in R, Python, or SAS. For example, we can use the following R code to extract the data:
+
+```{r eval=FALSE, echo = TRUE}
+url <- "https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/01-JAN-20/CSV/rows/0:19"
+
+data <- readr::read_csv(url, show_col_types = FALSE)
+
+data %>% DT::datatable()
+```
+
+The extracted data is a dataframe. We can check how many rows and columns are in the file, save it for later processing, or start working on it right away. In other words, we can stay in one place (e.g., RStudio, a Python notebook), get almost everything done, and keep detailed notes for others and ourselves when we need to re-run the code later. 
+
+## Extract violation data for one year
+
+We need data for one year, i.e., 365 or 366 days. One way to do this is to construct a list of URL's for all the dates, extract data, and assemble them together. Assume we need data from 01-JAN-20 to 31-DEC-20. Let's first construct the list of URL's.
+
+### Creaete a helper with a list of links we need
+
+```{r eval=FALSE, echo = TRUE}
+# define base url
+url_base <- "https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/"
+
+# define start date
+start_date <- as.Date("2020/01/01")
+  
+# define end date
+end_date <- as.Date("2020/12/31")
+  
+# generate range of dates
+date_range <- seq(start_date, end_date, "days")
+
+df_helper <- date_range %>%
+  as_tibble() %>% 
+  mutate(date = format(value, "%d-%b-%y")) %>% 
+  mutate(date = toupper(date)) %>% 
+  select(date) %>% 
+  mutate(url = paste0(url_base, date, "/CSV"))
+
+df_helper %>% head()
+```
+
+### Loop through days to get data
+
+```{r eval=FALSE, echo = TRUE}
+# a empty list to save dataframes
+df_list_vio  <-  list()
+
+# loop
+for( i in 1:nrow(df_helper)) {
+  print(paste0("date: ", df_helper$date[i]))
+  print(df_helper$url[i])
+
+  data <- read_csv(df_helper$url[i], col_types = cols(.default = "c")) 
+
+  df_list_vio[[i]] <- data
+}
+
+# assemble data
+df_vio <- df_list_vio %>%
+  map_dfr(bind_rows)
+```
+
+- It took about 15 minutes to loop through all dates
+
+### Tidyverse style code
+
+We can replace the for loop using `map` function and make the code more `tidyverse` style. 
+
+```{r eval=FALSE, echo = TRUE}
+df_tidy_vio <- df_helper %>% 
+  select(url) %>% 
+  pull() %>% 
+  map_dfr(~ read_csv(., col_types = cols(.default = "c")))
+```
+
+## Extract violation data by specifying rows
+
+It takes time to make 365 or 365 extractions. A faster way is to extract all available data and then subset data for the time range we need. First, we need to find out how many rows we will pull if we do not specify a date. We will need to add the option "COUNT" in the query to get the information, like this:
+
+"https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COUNT"
+
+You can put the URL in Chrome and see something like this:
+
+
+```{r eval=FALSE, echo=TRUE}
+<Envirofacts>
+<RequestRecordCount>138068</RequestRecordCount>
+</Envirofacts>
+```
+
+If we want to do it in R, this is something we may do:
+
+```{r eval=TRUE, echo=TRUE}
+url_count <- "https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COUNT"
+
+httr::GET(url_count)%>% 
+  #convert to text object using httr
+  httr::content(as = "text") %>% 
+  str_extract_all(pattern = "(?<=RequestRecordCount\\>).+?(?=\\<)")
+```
+
+So, there are way more than 10000 rows. We can following the [instruction](https://www.epa.gov/enviro/envirofacts-data-service-api), 
+
+>>"the output is limited to 10000 rows of data at a time, but a user can pick which 10000 rows of data and then return to retrieve the next 10000." 
+
+and we can make multiple extractions by specifying rows. Or can we set rows as "0:138067" and get all data in one extraction? It actually worked. Maybe Envirofacts made improvement and lifted the limit on the number of rows to exact? 
+
+## Other software
+
+We can use other software, such as Python and SAS, to extract data via API as well. Here is an example to extract first 20 rows of violation data in CSV format that are health based, from CWS, and on 01-JAN-20 using python:
+
+```{r eval=FALSE, echo=TRUE}
+import pandas as pd
+
+url = "https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/01-JAN-20/CSV/rows/0:19"
+
+data = pd.read_csv(url)
+data.head()
+```
+
+# References
+
+-   [Envirofacts Data Service API](https://www.epa.gov/enviro/envirofacts-data-service-api): the official website with guidance and instructions for EPS's data service API
+
+-   [lead_water_acs_data](https://github.com/rockfound/lead_water_acs_data): a github repository that has introduction of SDWIS 
+
+-   [envirofacts](https://github.com/markwh/envirofacts): an R package that is intended for working with EPA data API. It has note been updated for a few years. I did not try the package but found the functions in the package are helpful. 
