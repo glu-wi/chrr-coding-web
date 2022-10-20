@@ -186,7 +186,7 @@ and we can make multiple extractions by specifying rows. Or can we set rows as "
 
 ## Other software
 
-We can use other software, such as Python and SAS, to extract data via API as well. Here is an example to extract first 20 rows of violation data in CSV format that are health based, from CWS, and on 01-JAN-20 using python:
+We can use other software, such as Python and SAS, to extract data via API as well. Here is an example of using python to extract first 20 rows of violation data in CSV format that are health based, from CWS, and on 01-JAN-20:
 
 ```{r eval=FALSE, echo=TRUE}
 import pandas as pd
@@ -196,6 +196,28 @@ url = "https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASE
 data = pd.read_csv(url)
 data.head()
 ```
+
+Here is an example of using SAS proc http:
+
+```{r eval=FALSE, echo=TRUE}
+filename data_api "C:\test.csv";
+
+%let url = https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/01-JAN-20/CSV/rows/0:19;
+
+proc http
+  url="&url"
+  method= "GET"
+  out=data_api;
+run;
+
+proc import
+  file=data_api
+  out=data
+  dbms=csv
+  replace;
+run;
+```
+
 
 # References
 
