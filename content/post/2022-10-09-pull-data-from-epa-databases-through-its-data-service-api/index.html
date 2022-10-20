@@ -6,6 +6,7 @@ slug: pull-data-from-epa-databases-through-its-data-service-api
 categories:
   - API
   - R
+  - SAS
 tags:
   - API
 output:
@@ -158,7 +159,7 @@ httr::GET(url_count)%&gt;%
   str_extract_all(pattern = &quot;(?&lt;=RequestRecordCount\\&gt;).+?(?=\\&lt;)&quot;)</code></pre>
 <pre><code>## No encoding supplied: defaulting to UTF-8.</code></pre>
 <pre><code>## [[1]]
-## [1] &quot;138068&quot;</code></pre>
+## [1] &quot;142339&quot;</code></pre>
 <p>So, there are way more than 10000 rows. We can following the <a href="https://www.epa.gov/enviro/envirofacts-data-service-api">instruction</a>,</p>
 <blockquote>
 <blockquote>
@@ -169,13 +170,30 @@ httr::GET(url_count)%&gt;%
 </div>
 <div id="other-software" class="section level2">
 <h2>Other software</h2>
-<p>We can use other software, such as Python and SAS, to extract data via API as well. Here is an example to extract first 20 rows of violation data in CSV format that are health based, from CWS, and on 01-JAN-20 using python:</p>
+<p>We can use other software, such as Python and SAS, to extract data via API as well. Here is an example of using python to extract first 20 rows of violation data in CSV format that are health based, from CWS, and on 01-JAN-20:</p>
 <pre class="r"><code>import pandas as pd
 
 url = &quot;https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/01-JAN-20/CSV/rows/0:19&quot;
 
 data = pd.read_csv(url)
 data.head()</code></pre>
+<p>Here is an example of using SAS proc http:</p>
+<pre class="r"><code>filename data_api &quot;C:\test.csv&quot;;
+
+%let url = https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COMPL_PER_BEGIN_DATE/01-JAN-20/CSV/rows/0:19;
+
+proc http
+  url=&quot;&amp;url&quot;
+  method= &quot;GET&quot;
+  out=data_api;
+run;
+
+proc import
+  file=data_api
+  out=data
+  dbms=csv
+  replace;
+run;</code></pre>
 </div>
 </div>
 <div id="references" class="section level1">
