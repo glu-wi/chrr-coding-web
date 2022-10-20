@@ -157,16 +157,13 @@ httr::GET(url_count)%&gt;%
   #convert to text object using httr
   httr::content(as = &quot;text&quot;) %&gt;% 
   str_extract_all(pattern = &quot;(?&lt;=RequestRecordCount\\&gt;).+?(?=\\&lt;)&quot;)</code></pre>
-<pre><code>## No encoding supplied: defaulting to UTF-8.</code></pre>
-<pre><code>## [[1]]
-## [1] &quot;142339&quot;</code></pre>
 <p>So, there are way more than 10000 rows. We can following the <a href="https://www.epa.gov/enviro/envirofacts-data-service-api">instruction</a>,</p>
 <blockquote>
 <blockquote>
 <p>“the output is limited to 10000 rows of data at a time, but a user can pick which 10000 rows of data and then return to retrieve the next 10000.”</p>
 </blockquote>
 </blockquote>
-<p>and we can make multiple extractions by specifying rows. Or can we set rows as “0:138067” and get all data in one extraction? It actually worked. Maybe Envirofacts made improvement and lifted the limit on the number of rows to exact?</p>
+<p>and we can make multiple extractions by specifying rows. Or can we set rows as “0:138067” (<strong>Note</strong>: the number of rows changes when new records are added into EPA database) and get all data in one extraction? It actually worked. Maybe Envirofacts made improvement and lifted the limit on the number of rows to exact?</p>
 </div>
 <div id="other-software" class="section level2">
 <h2>Other software</h2>

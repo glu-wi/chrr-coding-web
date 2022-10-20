@@ -170,7 +170,7 @@ You can put the URL in Chrome and see something like this:
 
 If we want to do it in R, this is something we may do:
 
-```{r eval=TRUE, echo=TRUE}
+```{r eval=FALSE, echo=TRUE}
 url_count <- "https://data.epa.gov/efservice/VIOLATION/PWS_TYPE_CODE/CWS/IS_HEALTH_BASED_IND/Y/COUNT"
 
 httr::GET(url_count)%>% 
@@ -183,7 +183,7 @@ So, there are way more than 10000 rows. We can following the [instruction](https
 
 >>"the output is limited to 10000 rows of data at a time, but a user can pick which 10000 rows of data and then return to retrieve the next 10000." 
 
-and we can make multiple extractions by specifying rows. Or can we set rows as "0:138067" and get all data in one extraction? It actually worked. Maybe Envirofacts made improvement and lifted the limit on the number of rows to exact? 
+and we can make multiple extractions by specifying rows. Or can we set rows as "0:138067" (**Note**: the number of rows changes when new records are added into EPA database) and get all data in one extraction? It actually worked. Maybe Envirofacts made improvement and lifted the limit on the number of rows to exact? 
 
 ## Other software
 
