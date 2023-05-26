@@ -33,7 +33,7 @@ print_kbl <- function(df){
 
 The goal of this post is to calculate `Percentage of population living in a rural area` using shapefiles of [2020 Tabulation (Census) Block](https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/). Each of the block shapefiles has a column `UR20`, which indicates if a block is Urban or Rural, and a column `POP20`, which has the population estimates based on 2020 decennial census. We can find total, rural, and urban populations in each county by aggregating the block-level data and then calculate percentage of rural population by dividing rural population by total population. Python is used in this post. 
 
-We will first calculate percentage of rural population in WI using blocks data, and then extebd the procedure to find % rural for all counties in 50 states and DC
+We will first calculate percentage of rural population in WI using blocks data, and then extend the procedure to find % rural for all counties in 50 states and DC
 
 # Import packages
 
@@ -47,14 +47,14 @@ import pyarrow.parquet as pq
 
 ## Import WI blocks shapefile
 
-We will directly download the WI blocks shapefile (277 MB) using `GeoPandas` from Census website. It would take a few minutes. (~3 min on my machine)
+We will directly download the WI blocks shapefile (277 MB) using `GeoPandas` from Census website. It will take a few minutes, depending on the computer and network. (~3 min on my machine)
 
 ```
 url = "https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_55_tabblock20.zip"
 wi_blocks = gpd.read_file(url)
 ```
 
-The shapefile has more information than we actually need. So let's just keep the 4 columns we need. 
+The shapefile has more information than we actually need. So let's just keep the 4 columns we need and also rename the FIPS code columns. 
 ```
 
 wi_blocks = wi_blocks[['STATEFP20', 'COUNTYFP20', 'UR20', 'POP20']].\
@@ -76,7 +76,7 @@ wi_ct_pop_u = wi_blocks[wi_blocks.UR20 == "U"].groupby(['statecode', 'countycode
     sum().reset_index().rename(columns={'POP20':'pop_u'})
 ```
 
-Next, we will join the three population dateframes together and calculate the rural rate.
+Next, we will join the three population dataframes together and calculate the rural rate.
 
 ```
 # left join
@@ -169,7 +169,7 @@ us_ct_rural_rate = us_ct_pop.merge(us_ct_pop_r, on=['statecode', 'countycode'], 
 us_ct_rural_rate['rate'] = us_ct_rural_rate['pop_r']/us_ct_rural_rate['pop']
 ```
 
-Let's chech the first few rows of `us_ct_rural_rate`
+Let's check the first few rows of `us_ct_rural_rate`
 
 ```
 us_ct_rural_rate.head(5)
@@ -189,12 +189,12 @@ tibble::tribble(
 
 ## Comapure the calcuated results with data released by Census
 
-We can compare the calcualted results with the data released by Census: [County-level Urban and Rural information for the 2020 Census](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html). The data is in an excel file, and we can download it using Pandas, which will take ~ 1 minute.
+We can compare the calculated results with the data released by Census: [County-level Urban and Rural information for the 2020 Census](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html). The data is in an excel file, and we can download it using Pandas, which takes ~ 1 minute.
 
 ```
 census_ct_ur_2020 = pd.read_excel('https://www2.census.gov/geo/docs/reference/ua/2020_UA_COUNTY.xlsx')
 ```
-Let's select only columns we need and rename them.'_PUB' is used to indicate public data from Census (or published by Census).
+Let's select only columns we need and rename them.'_PUB' is used to indicate public (or published) data from Census.
 
 ```
 # select needed columns
@@ -235,7 +235,7 @@ tibble::tribble(
 
 ```
 
-Now we can join Census data with the data from our calculations using `statecode` and `countycode` as key. In the joined data, we add a colunm `rate_diff` to see the difference between the two rates.
+Now we can join Census data with the data from our calculations using `statecode` and `countycode` as key. In the joined data, we add a column `rate_diff` to see the difference between the two rates.
 
 ```
 # left join
