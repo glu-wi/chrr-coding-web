@@ -34,7 +34,7 @@ output:
 <div id="introduction" class="section level1">
 <h1>Introduction</h1>
 <p>The goal of this post is to calculate <code>Percentage of population living in a rural area</code> using shapefiles of <a href="https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/">2020 Tabulation (Census) Block</a>. Each of the block shapefiles has a column <code>UR20</code>, which indicates if a block is Urban or Rural, and a column <code>POP20</code>, which has the population estimates based on 2020 decennial census. We can find total, rural, and urban populations in each county by aggregating the block-level data and then calculate percentage of rural population by dividing rural population by total population. Python is used in this post.</p>
-<p>We will first calculate percentage of rural population in WI using blocks data, and then extebd the procedure to find % rural for all counties in 50 states and DC</p>
+<p>We will first calculate percentage of rural population in WI using blocks data, and then extend the procedure to find % rural for all counties in 50 states and DC</p>
 </div>
 <div id="import-packages" class="section level1">
 <h1>Import packages</h1>
@@ -46,10 +46,10 @@ import pyarrow.parquet as pq</code></pre>
 <h1>County-level rural rate for counties in WI</h1>
 <div id="import-wi-blocks-shapefile" class="section level2">
 <h2>Import WI blocks shapefile</h2>
-<p>We will directly download the WI blocks shapefile (277 MB) using <code>GeoPandas</code> from Census website. It would take a few minutes. (~3 min on my machine)</p>
+<p>We will directly download the WI blocks shapefile (277 MB) using <code>GeoPandas</code> from Census website. It will take a few minutes, depending on the computer and network. (~3 min on my machine)</p>
 <pre><code>url = &quot;https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_55_tabblock20.zip&quot;
 wi_blocks = gpd.read_file(url)</code></pre>
-<p>The shapefile has more information than we actually need. So let’s just keep the 4 columns we need.</p>
+<p>The shapefile has more information than we actually need. So let’s just keep the 4 columns we need and also rename the FIPS code columns.</p>
 <pre><code>
 wi_blocks = wi_blocks[[&#39;STATEFP20&#39;, &#39;COUNTYFP20&#39;, &#39;UR20&#39;, &#39;POP20&#39;]].\
     rename(columns={&#39;STATEFP20&#39;:&#39;statecode&#39;, &#39;COUNTYFP20&#39;:&#39;countycode&#39;})</code></pre>
@@ -64,7 +64,7 @@ wi_ct_pop_r = wi_blocks[wi_blocks.UR20 == &quot;R&quot;].groupby([&#39;statecode
 # urban pop at county-level
 wi_ct_pop_u = wi_blocks[wi_blocks.UR20 == &quot;U&quot;].groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].\
     sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop_u&#39;})</code></pre>
-<p>Next, we will join the three population dateframes together and calculate the rural rate.</p>
+<p>Next, we will join the three population dataframes together and calculate the rural rate.</p>
 <pre><code># left join
 wi_ct_rural_rate = wi_ct_pop.merge(us_ct_pop_r, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;).\
     merge(us_ct_pop_u, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;)
@@ -124,7 +124,7 @@ us_ct_rural_rate = us_ct_pop.merge(us_ct_pop_r, on=[&#39;statecode&#39;, &#39;co
     merge(us_ct_pop_u, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;)
 # rural rate 
 us_ct_rural_rate[&#39;rate&#39;] = us_ct_rural_rate[&#39;pop_r&#39;]/us_ct_rural_rate[&#39;pop&#39;]</code></pre>
-<p>Let’s chech the first few rows of <code>us_ct_rural_rate</code></p>
+<p>Let’s check the first few rows of <code>us_ct_rural_rate</code></p>
 <pre><code>us_ct_rural_rate.head(5)</code></pre>
 <pre><code>## # A tibble: 5 × 6
 ##   statecode countycode    pop pop_r pop_u   rate
@@ -137,9 +137,9 @@ us_ct_rural_rate[&#39;rate&#39;] = us_ct_rural_rate[&#39;pop_r&#39;]/us_ct_rural
 </div>
 <div id="comapure-the-calcuated-results-with-data-released-by-census" class="section level2">
 <h2>Comapure the calcuated results with data released by Census</h2>
-<p>We can compare the calcualted results with the data released by Census: <a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html">County-level Urban and Rural information for the 2020 Census</a>. The data is in an excel file, and we can download it using Pandas, which will take ~ 1 minute.</p>
+<p>We can compare the calculated results with the data released by Census: <a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html">County-level Urban and Rural information for the 2020 Census</a>. The data is in an excel file, and we can download it using Pandas, which takes ~ 1 minute.</p>
 <pre><code>census_ct_ur_2020 = pd.read_excel(&#39;https://www2.census.gov/geo/docs/reference/ua/2020_UA_COUNTY.xlsx&#39;)</code></pre>
-<p>Let’s select only columns we need and rename them.’_PUB’ is used to indicate public data from Census (or published by Census).</p>
+<p>Let’s select only columns we need and rename them.’_PUB’ is used to indicate public (or published) data from Census.</p>
 <pre><code># select needed columns
 census_ct_ur_2020 = census_ct_ur_2020[[&#39;STATE&#39;, &#39;COUNTY&#39;, &#39;POP_COU&#39;,&#39;POP_URB&#39;, &#39;POP_RUR&#39;, &#39;POPPCT_RUR&#39;]].\
     rename(columns={&#39;STATE&#39;:&#39;statecode&#39;, &#39;COUNTY&#39;:&#39;countycode&#39;, &#39;POP_COU&#39;:&#39;pop_PUB&#39;, &#39;POP_URB&#39;:&#39;pop_u_PUB&#39;, &#39;POP_RUR&#39;:&#39;pop_r_PUB&#39;, &#39;POPPCT_RUR&#39;:&#39;rate_PUB&#39;})
@@ -165,7 +165,7 @@ census_ct_ur_2020.head(3)</code></pre>
 ## 1         1          1   58805     34885     23920    0.407
 ## 2         1          3  231767    144654     87113    0.376
 ## 3         1          5   25223      8596     16627    0.659</code></pre>
-<p>Now we can join Census data with the data from our calculations using <code>statecode</code> and <code>countycode</code> as key. In the joined data, we add a colunm <code>rate_diff</code> to see the difference between the two rates.</p>
+<p>Now we can join Census data with the data from our calculations using <code>statecode</code> and <code>countycode</code> as key. In the joined data, we add a column <code>rate_diff</code> to see the difference between the two rates.</p>
 <pre><code># left join
 compare_rural_rate = census_ct_ur_2020.merge(us_ct_rural_rate, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;)
 # difference between calculated rates and Census published rates
