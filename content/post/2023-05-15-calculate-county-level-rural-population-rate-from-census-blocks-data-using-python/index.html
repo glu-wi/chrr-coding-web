@@ -1,0 +1,182 @@
+---
+title: Calculate county-level rural population rate from Census blocks data using
+  Python
+author: ''
+date: '2023-05-15'
+slug: calculate-county-level-rural-population-rate-from-census-blocks-data-using-python
+categories:
+  - Python
+tags:
+  - Python
+output:
+  blogdown::html_page:
+    toc: true   
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#import-packages" id="toc-import-packages">Import packages</a></li>
+<li><a href="#county-level-rural-rate-for-counties-in-wi" id="toc-county-level-rural-rate-for-counties-in-wi">County-level rural rate for counties in WI</a>
+<ul>
+<li><a href="#import-wi-blocks-shapefile" id="toc-import-wi-blocks-shapefile">Import WI blocks shapefile</a></li>
+</ul></li>
+<li><a href="#county-level-rural-rate-for-counties-in-50-states-dc" id="toc-county-level-rural-rate-for-counties-in-50-states-dc">County-level rural rate for counties in 50 states + DC</a>
+<ul>
+<li><a href="#import-data---2020-tabulation-census-block" id="toc-import-data---2020-tabulation-census-block">import data - ‘2020 Tabulation (Census) Block’</a></li>
+<li><a href="#comapure-the-calcuated-results-with-data-released-by-census" id="toc-comapure-the-calcuated-results-with-data-released-by-census">Comapure the calcuated results with data released by Census</a></li>
+</ul></li>
+<li><a href="#conclusion" id="toc-conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>The goal of this post is to calculate <code>Percentage of population living in a rural area</code> using shapefiles of <a href="https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/">2020 Tabulation (Census) Block</a>. Each of the block shapefiles has a column <code>UR20</code>, which indicates if a block is Urban or Rural, and a column <code>POP20</code>, which has the population estimates based on 2020 decennial census. We can find total, rural, and urban populations in each county by aggregating the block-level data and then calculate percentage of rural population by dividing rural population by total population. Python is used in this post.</p>
+<p>We will first calculate percentage of rural population in WI using blocks data, and then extebd the procedure to find % rural for all counties in 50 states and DC</p>
+</div>
+<div id="import-packages" class="section level1">
+<h1>Import packages</h1>
+<pre><code>import geopandas as gpd
+import pandas as pd
+import pyarrow.parquet as pq</code></pre>
+</div>
+<div id="county-level-rural-rate-for-counties-in-wi" class="section level1">
+<h1>County-level rural rate for counties in WI</h1>
+<div id="import-wi-blocks-shapefile" class="section level2">
+<h2>Import WI blocks shapefile</h2>
+<p>We will directly download the WI blocks shapefile (277 MB) using <code>GeoPandas</code> from Census website. It would take a few minutes. (~3 min on my machine)</p>
+<pre><code>url = &quot;https://www2.census.gov/geo/tiger/TIGER2020/TABBLOCK20/tl_2020_55_tabblock20.zip&quot;
+wi_blocks = gpd.read_file(url)</code></pre>
+<p>The shapefile has more information than we actually need. So let’s just keep the 4 columns we need.</p>
+<pre><code>
+wi_blocks = wi_blocks[[&#39;STATEFP20&#39;, &#39;COUNTYFP20&#39;, &#39;UR20&#39;, &#39;POP20&#39;]].\
+    rename(columns={&#39;STATEFP20&#39;:&#39;statecode&#39;, &#39;COUNTYFP20&#39;:&#39;countycode&#39;})</code></pre>
+<p>Now we can aggregate the data from block-level to county-level and find total, rural, and urban populations.</p>
+<pre><code># total pop for each WI county
+wi_ct_pop = wi_blocks.groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop&#39;})
+
+# rural pop at county-level
+wi_ct_pop_r = wi_blocks[wi_blocks.UR20 == &quot;R&quot;].groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].\
+    sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop_r&#39;})
+    
+# urban pop at county-level
+wi_ct_pop_u = wi_blocks[wi_blocks.UR20 == &quot;U&quot;].groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].\
+    sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop_u&#39;})</code></pre>
+<p>Next, we will join the three population dateframes together and calculate the rural rate.</p>
+<pre><code># left join
+wi_ct_rural_rate = wi_ct_pop.merge(us_ct_pop_r, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;).\
+    merge(us_ct_pop_u, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;)
+    
+# rural rate
+wi_ct_rural_rate[&#39;rate&#39;] = wi_ct_rural_rate[&#39;pop_r&#39;]/wi_ct_rural_rate[&#39;pop&#39;]</code></pre>
+<p>Let’s take a look at the first a few rows in <code>wi_ct_rural_rate</code></p>
+<pre><code>wi_ct_rural_rate.head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 6
+##   statecode countycode    pop pop_r pop_u     rate
+##       &lt;int&gt; &lt;chr&gt;       &lt;int&gt; &lt;int&gt; &lt;chr&gt;    &lt;dbl&gt;
+## 1        55 001         20654 20654 NaN      1    
+## 2        55 003         16027  8802 7225.0   0.549
+## 3        55 005         46711 36555 10156.0  0.783
+## 4        55 007         16220 16220 NaN      1    
+## 5        55 009        268740 44584 224156.0 0.166</code></pre>
+</div>
+</div>
+<div id="county-level-rural-rate-for-counties-in-50-states-dc" class="section level1">
+<h1>County-level rural rate for counties in 50 states + DC</h1>
+<div id="import-data---2020-tabulation-census-block" class="section level2">
+<h2>import data - ‘2020 Tabulation (Census) Block’</h2>
+<p>If you download Census block shapefiles for 50 states and DC, those zipped files are about 9GB all together. I assembled all those files together and saved the results in a parquet file (~8.4GB). <a href="https://arrow.apache.org/docs/python/parquet.html">Apache Arrow</a> is good at processing large data files (including parquet files) with high performance.</p>
+<p>After reading in the parquet file, the data was converted to a Pandas dataframe.</p>
+<pre><code>us_blocks = pq.read_table(&#39;data/TABBLOCK20_shp_all.parquet&#39;, columns=[&#39;GEOID20&#39;, &#39;UR20&#39;, &#39;POP20&#39;]).to_pandas(split_blocks=True, self_destruct=True)</code></pre>
+<p>The dataframe looks like this:</p>
+<pre><code>## # A tibble: 3 × 3
+##   GEOID20         UR20  POP20
+##   &lt;chr&gt;           &lt;chr&gt; &lt;int&gt;
+## 1 011339657003025 R        15
+## 2 010150016001026 U        20
+## 3 010150011012065 R        17</code></pre>
+<p>Let’s create <code>statecode</code> and <code>countycode</code> columns by substring <code>GEOID20</code>:</p>
+<pre><code>us_blocks[&#39;statecode&#39;] = us_blocks.GEOID20.str[:2]
+us_blocks[&#39;countycode&#39;] = us_blocks.GEOID20.str[2:5]
+# drop &#39;GEOID20&#39;
+us_blocks = us_blocks.drop(&#39;GEOID20&#39;, axis=1)</code></pre>
+<p>Now the dataframe looks like this:</p>
+<pre><code>## # A tibble: 3 × 4
+##   UR20  POP20 statecode countycode
+##   &lt;chr&gt; &lt;dbl&gt; &lt;chr&gt;     &lt;chr&gt;     
+## 1 R        15 01        133       
+## 2 U        20 01        015       
+## 3 R        17 01        015</code></pre>
+<p>Again, we can aggregate the data from block-level to county-level and find total, rural, and urban populations for all counties.</p>
+<pre><code># total pop
+us_ct_pop = us_blocks.groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop&#39;})
+# rural pop
+us_ct_pop_r = us_blocks[us_blocks.UR20 == &quot;R&quot;].groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].\
+    sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop_r&#39;})
+# urban pop    
+us_ct_pop_u = us_blocks[us_blocks.UR20 == &quot;U&quot;].groupby([&#39;statecode&#39;, &#39;countycode&#39;])[[&#39;POP20&#39;]].\
+    sum().reset_index().rename(columns={&#39;POP20&#39;:&#39;pop_u&#39;})</code></pre>
+<p>We can join the three dataframes and calculate rural population rates.</p>
+<pre><code># left join
+us_ct_rural_rate = us_ct_pop.merge(us_ct_pop_r, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;).\
+    merge(us_ct_pop_u, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;)
+# rural rate 
+us_ct_rural_rate[&#39;rate&#39;] = us_ct_rural_rate[&#39;pop_r&#39;]/us_ct_rural_rate[&#39;pop&#39;]</code></pre>
+<p>Let’s chech the first few rows of <code>us_ct_rural_rate</code></p>
+<pre><code>us_ct_rural_rate.head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 6
+##   statecode countycode    pop pop_r pop_u   rate
+##       &lt;int&gt;      &lt;int&gt;  &lt;int&gt; &lt;int&gt; &lt;chr&gt;  &lt;dbl&gt;
+## 1         1          1  58805 23920 34885  0.407
+## 2         1          3 231767 87113 144654 0.376
+## 3         1          5  25223 16627 8596   0.659
+## 4         1          7  22293 22293 NaN    1    
+## 5         1          9  59134 53510 5624   0.905</code></pre>
+</div>
+<div id="comapure-the-calcuated-results-with-data-released-by-census" class="section level2">
+<h2>Comapure the calcuated results with data released by Census</h2>
+<p>We can compare the calcualted results with the data released by Census: <a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html">County-level Urban and Rural information for the 2020 Census</a>. The data is in an excel file, and we can download it using Pandas, which will take ~ 1 minute.</p>
+<pre><code>census_ct_ur_2020 = pd.read_excel(&#39;https://www2.census.gov/geo/docs/reference/ua/2020_UA_COUNTY.xlsx&#39;)</code></pre>
+<p>Let’s select only columns we need and rename them.’_PUB’ is used to indicate public data from Census (or published by Census).</p>
+<pre><code># select needed columns
+census_ct_ur_2020 = census_ct_ur_2020[[&#39;STATE&#39;, &#39;COUNTY&#39;, &#39;POP_COU&#39;,&#39;POP_URB&#39;, &#39;POP_RUR&#39;, &#39;POPPCT_RUR&#39;]].\
+    rename(columns={&#39;STATE&#39;:&#39;statecode&#39;, &#39;COUNTY&#39;:&#39;countycode&#39;, &#39;POP_COU&#39;:&#39;pop_PUB&#39;, &#39;POP_URB&#39;:&#39;pop_u_PUB&#39;, &#39;POP_RUR&#39;:&#39;pop_r_PUB&#39;, &#39;POPPCT_RUR&#39;:&#39;rate_PUB&#39;})
+
+census_ct_ur_2020.head(3)  </code></pre>
+<pre><code>## # A tibble: 3 × 6
+##   statecode countycode pop_PUB pop_u_PUB pop_r_PUB rate_PUB
+##       &lt;int&gt;      &lt;int&gt;   &lt;int&gt;     &lt;int&gt;     &lt;int&gt;    &lt;dbl&gt;
+## 1         1          1   58805     34885     23920    0.407
+## 2         1          3  231767    144654     87113    0.376
+## 3         1          5   25223      8596     16627    0.659</code></pre>
+<p>We only need rows for 50 states and DC, and we need to convert <code>statecode</code> and <code>countycode</code> to strings.</p>
+<pre><code># keep only 50 states + DC
+census_ct_ur_2020 = census_ct_ur_2020[census_ct_ur_2020.statecode &lt; 57]
+# convert `statecode` and `countycode` to strings padded with &#39;0&#39;
+census_ct_ur_2020[&#39;statecode&#39;] = census_ct_ur_2020[&#39;statecode&#39;].astype(str).str.zfill(2)
+census_ct_ur_2020[&#39;countycode&#39;] = census_ct_ur_2020[&#39;countycode&#39;].astype(str).str.zfill(3)
+
+census_ct_ur_2020.head(3)</code></pre>
+<pre><code>## # A tibble: 3 × 6
+##   statecode countycode pop_PUB pop_u_PUB pop_r_PUB rate_PUB
+##       &lt;int&gt;      &lt;int&gt;   &lt;int&gt;     &lt;int&gt;     &lt;int&gt;    &lt;dbl&gt;
+## 1         1          1   58805     34885     23920    0.407
+## 2         1          3  231767    144654     87113    0.376
+## 3         1          5   25223      8596     16627    0.659</code></pre>
+<p>Now we can join Census data with the data from our calculations using <code>statecode</code> and <code>countycode</code> as key. In the joined data, we add a colunm <code>rate_diff</code> to see the difference between the two rates.</p>
+<pre><code># left join
+compare_rural_rate = census_ct_ur_2020.merge(us_ct_rural_rate, on=[&#39;statecode&#39;, &#39;countycode&#39;], how=&#39;left&#39;)
+# difference between calculated rates and Census published rates
+compare_rural_rate[&#39;rate_dif&#39;] = compare_rural_rate[&#39;rate&#39;] - compare_rural_rate[&#39;rate_PUB&#39;]
+</code></pre>
+<p>If we filter <code>compare_rural_rate</code> by setting <code>rate_dif &gt; 1e-9</code>, we will get an empty dataframe, which means no row has <code>rate_dif &gt; 1e-9</code>.</p>
+<pre><code># find if there are cases where difference &gt; 1e-9
+compare_rural_rate[compare_rural_rate.rate_dif &gt; 1e-9]</code></pre>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>We can find percent of rural population at county-level by processing Census blocks data. It seems that the county-level data released by Census was processed in a similar fashion. The data of Census tabulation blocks seem to serve as the foundation to form data for higher-level geographies (e.g., county).</p>
+</div>
