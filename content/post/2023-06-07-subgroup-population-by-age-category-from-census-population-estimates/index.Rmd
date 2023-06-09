@@ -1,7 +1,7 @@
 ---
 title: Subgroup Population by Age Category from Census Population Estimates
 author: ''
-date: '2023-06-07'
+date: '2023-06-09'
 slug: subgroup-population-by-age-category-from-census-population-estimates
 categories:
   - R
