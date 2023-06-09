@@ -1,0 +1,1543 @@
+---
+title: Subgroup Population by Age Category from Census Population Estimates
+author: ''
+date: '2023-06-07'
+slug: subgroup-population-by-age-category-from-census-population-estimates
+categories:
+  - R
+tags: 
+  - R
+output:
+  blogdown::html_page:
+    toc: true 
+---
+
+<script src="{{< blogdown/postref >}}index_files/kePrint/kePrint.js"></script>
+<link href="{{< blogdown/postref >}}index_files/lightable/lightable.css" rel="stylesheet" />
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction-ypll" id="toc-introduction-ypll">Introduction: YPLL</a></li>
+<li><a href="#what-population-data-is-needed-for-subgroup-ypll-calculation" id="toc-what-population-data-is-needed-for-subgroup-ypll-calculation">What population data is needed for subgroup YPLL calculation</a>
+<ul>
+<li><a href="#age-categories-age_cat" id="toc-age-categories-age_cat">Age categories (age_cat)</a></li>
+<li><a href="#raceethnicity-subgroups" id="toc-raceethnicity-subgroups">Race/ethnicity subgroups</a></li>
+</ul></li>
+<li><a href="#census-population-estimates" id="toc-census-population-estimates">Census population estimates</a>
+<ul>
+<li><a href="#get-data-directly-from-census-pft-website" id="toc-get-data-directly-from-census-pft-website">Get data directly from Census pft website</a></li>
+<li><a href="#overview-of-the-raw-data" id="toc-overview-of-the-raw-data">Overview of the raw data</a></li>
+</ul></li>
+<li><a href="#get-subgroup-population-by-age-category" id="toc-get-subgroup-population-by-age-category">Get subgroup population by age category</a>
+<ul>
+<li><a href="#subset-the-raw-data-keep-only-needed-columns" id="toc-subset-the-raw-data-keep-only-needed-columns">subset the raw data, keep only needed columns</a></li>
+<li><a href="#county-population-by-age-categories-and-raceethnicity-subgroups" id="toc-county-population-by-age-categories-and-raceethnicity-subgroups">County population by age categories and race/ethnicity subgroups</a>
+<ul>
+<li><a href="#age_cat-2-7" id="toc-age_cat-2-7">age_cat = 2-7</a></li>
+<li><a href="#age_cat-0-infant-population" id="toc-age_cat-0-infant-population">age_cat = 0: infant population</a></li>
+<li><a href="#age_cat-1-1-14-year" id="toc-age_cat-1-1-14-year">age_cat = 1: 1-14 year</a></li>
+<li><a href="#all-age-categories" id="toc-all-age-categories">all age categories</a></li>
+<li><a href="#pivot-tabel-longer-so-that-we-have-one-column-of-subgroup-codes-and-one-column-for-population" id="toc-pivot-tabel-longer-so-that-we-have-one-column-of-subgroup-codes-and-one-column-for-population">Pivot tabel longer so that we have one column of subgroup codes and one column for population</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#summary" id="toc-summary">Summary</a></li>
+</ul>
+</div>
+
+<div id="introduction-ypll" class="section level1">
+<h1>Introduction: YPLL</h1>
+<p>Years of Potential Life Lost (YPLL) is widely used for measuring the rate and distribution of premature mortality. <a href="https://www.countyhealthrankings.org/explore-health-rankings/county-health-rankings-model/health-outcomes/length-of-life/premature-death?year=2023">CHRR</a> uses YPLL as one of health outcomes to measure county health status.YPLL is a rate and age-adjusted, and it can be calculated as</p>
+<p><span class="math display">\[
+\boxed{ {YPLL \: Rate }_{{age-adj}}=\sum_{i=0}^{75} \frac {(75-i)\cdot d_i\cdot  {w_i}}{p_i} \cdot 100,000}
+\]</span>
+where</p>
+<ul>
+<li><p><span class="math inline">\(75\)</span> is the upper age limit established,</p></li>
+<li><p><span class="math inline">\(i\)</span> is the midpoint of the grouped year of age at death (e.g., 59.5 for age group 55-64),</p></li>
+<li><p><span class="math inline">\(d_i\)</span> is the number of deaths at age <span class="math inline">\(i\)</span>.</p></li>
+<li><p><span class="math inline">\(p_i\)</span> is the population for age group i.</p></li>
+<li><p><span class="math inline">\(\sum p_i\)</span> is the population between the lower and upper age limits (e.g., 75 as the upper age limit and 0 as the lower age limit)</p></li>
+<li><p><span class="math inline">\({w_i}\)</span> is the weight of age adjustment for group i on the basis of the US standard year 2000 population. <span class="math inline">\(\sum w_i = 1\)</span></p></li>
+</ul>
+<p>The population data is needed in the denominator of the above formula, and <span class="math inline">\(p_i\)</span> has been based on the single-year-of-age, bridged-race, county-level population estimates released by the National Center for Health Statistics (NCHS). The series of bridged-race population estimates is a collaborative work between NCHS and U. S. Census Bureau. However, NCHS discontinued the production of single-year-of-age, bridged-race population estimates after releasing 2020 data. In their <a href="https://www.cdc.gov/nchs/data/nvss/bridged_race/Documentation-Bridged-PostcenV2020.pdf">documentation</a>, it is mentioned that “The U.S. Census Bureau annually releases unbridged population estimates for five-year age groups and race at the county level.” This post uses R to explore the feasibility of getting population data needed for subgroup YPLL calculations from Census population estimates.</p>
+</div>
+<div id="what-population-data-is-needed-for-subgroup-ypll-calculation" class="section level1">
+<h1>What population data is needed for subgroup YPLL calculation</h1>
+<p>We want to have subgroup population data by age categories at county level.</p>
+<div id="age-categories-age_cat" class="section level2">
+<h2>Age categories (age_cat)</h2>
+<p>From the lower age limit 0 to the upper age limit 75, the population is usually grouped into 8 age categories (coded from 0 to 7):</p>
+<hr />
+<table class="table table-striped table-hover" style>
+<caption>
+<span id="tab:unnamed-chunk-1">Table 1: </span>Age categories
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Age
+</th>
+<th style="text-align:right;">
+age_cat
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;width: 12em; ">
+0
+</td>
+<td style="text-align:right;">
+0
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+1-14
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+15-24
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+25-34
+</td>
+<td style="text-align:right;">
+3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+35-44
+</td>
+<td style="text-align:right;">
+4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+45-54
+</td>
+<td style="text-align:right;">
+5
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+55-64
+</td>
+<td style="text-align:right;">
+6
+</td>
+</tr>
+<tr>
+<td style="text-align:left;width: 12em; ">
+65-74
+</td>
+<td style="text-align:right;">
+7
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="raceethnicity-subgroups" class="section level2">
+<h2>Race/ethnicity subgroups</h2>
+<p>Five race/ethnicity subgroups have been used in YPLL calculations at CHRR.</p>
+<table class="table table-striped table-hover" style>
+<caption>
+<span id="tab:unnamed-chunk-2">Table 2: </span>Subgroups
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Subgroup
+</th>
+<th style="text-align:left;">
+Description
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+1
+</td>
+<td style="text-align:left;">
+non-Hispanic, White alone
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+2
+</td>
+<td style="text-align:left;">
+non-Hispanic, Black alone
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+3
+</td>
+<td style="text-align:left;">
+non-Hispanic, AIAN (American Indian or Alaska Native) alone
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+4
+</td>
+<td style="text-align:left;">
+non-Hispanic, Asian alone
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+8
+</td>
+<td style="text-align:left;">
+Hispanic
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note</strong>: Bridged and un-bridged race populations are not identical. By bridging, those in the group “two or more races” are assigned using probabilistic factors and included in White, Black, AIAN, or Asian.</p>
+</div>
+</div>
+<div id="census-population-estimates" class="section level1">
+<h1>Census population estimates</h1>
+<p>Let’s use 2020 Census county-level population estimates as an example and see how the data look like. Here is the <a href="https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/counties/asrh/">link</a> and the file name is <code>CC-EST2020-ALLDATA.csv</code>.</p>
+<div id="get-data-directly-from-census-pft-website" class="section level2">
+<h2>Get data directly from Census pft website</h2>
+<pre class="r"><code>cc_est2020_all &lt;- read_csv(&quot;https://www2.census.gov/programs-surveys/popest/datasets/2010-2020/counties/asrh/CC-EST2020-ALLDATA.csv&quot;) |&gt;  
+  janitor::clean_names() |&gt;  
+  glimpse()</code></pre>
+<pre><code>## Rows: 776,321
+## Columns: 80
+## $ sumlev       &lt;chr&gt; &quot;050&quot;, &quot;050&quot;, &quot;050&quot;, &quot;050&quot;, &quot;050&quot;, &quot;050&quot;, &quot;050&quot;, &quot;050&quot;, &quot;…
+## $ state        &lt;chr&gt; &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01…
+## $ county       &lt;chr&gt; &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;…
+## $ stname       &lt;chr&gt; &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;Alabama&quot;, &quot;A…
+## $ ctyname      &lt;chr&gt; &quot;Autauga County&quot;, &quot;Autauga County&quot;, &quot;Autauga County&quot;, &quot;Au…
+## $ year         &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ agegrp       &lt;dbl&gt; 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,…
+## $ tot_pop      &lt;dbl&gt; 54571, 3579, 3991, 4290, 4290, 3080, 3157, 3330, 4157, 40…
+## $ tot_male     &lt;dbl&gt; 26569, 1866, 2001, 2171, 2213, 1539, 1543, 1594, 2004, 19…
+## $ tot_female   &lt;dbl&gt; 28002, 1713, 1990, 2119, 2077, 1541, 1614, 1736, 2153, 21…
+## $ wa_male      &lt;dbl&gt; 21295, 1411, 1521, 1658, 1628, 1201, 1234, 1289, 1596, 16…
+## $ wa_female    &lt;dbl&gt; 22002, 1316, 1526, 1620, 1585, 1184, 1223, 1298, 1645, 16…
+## $ ba_male      &lt;dbl&gt; 4559, 362, 399, 431, 502, 293, 277, 276, 338, 303, 315, 3…
+## $ ba_female    &lt;dbl&gt; 5130, 317, 374, 406, 424, 312, 350, 378, 432, 384, 353, 3…
+## $ ia_male      &lt;dbl&gt; 119, 5, 14, 15, 12, 6, 1, 1, 11, 9, 14, 11, 7, 6, 3, 4, 0…
+## $ ia_female    &lt;dbl&gt; 139, 3, 8, 12, 7, 9, 3, 10, 9, 14, 11, 12, 9, 13, 8, 5, 6…
+## $ aa_male      &lt;dbl&gt; 200, 13, 17, 23, 25, 8, 7, 12, 30, 16, 19, 10, 6, 7, 4, 2…
+## $ aa_female    &lt;dbl&gt; 284, 15, 21, 18, 14, 7, 23, 25, 30, 36, 27, 17, 9, 13, 9,…
+## $ na_male      &lt;dbl&gt; 29, 1, 1, 4, 4, 3, 6, 3, 2, 1, 3, 0, 1, 0, 0, 0, 0, 0, 0,…
+## $ na_female    &lt;dbl&gt; 18, 0, 3, 1, 2, 2, 3, 1, 3, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0,…
+## $ tom_male     &lt;dbl&gt; 367, 74, 49, 40, 42, 28, 18, 13, 27, 20, 13, 14, 8, 9, 6,…
+## $ tom_female   &lt;dbl&gt; 429, 62, 58, 62, 45, 27, 12, 24, 34, 18, 23, 20, 7, 14, 1…
+## $ wac_male     &lt;dbl&gt; 21633, 1479, 1570, 1694, 1664, 1228, 1250, 1301, 1621, 16…
+## $ wac_female   &lt;dbl&gt; 22391, 1368, 1583, 1681, 1624, 1206, 1235, 1319, 1675, 16…
+## $ bac_male     &lt;dbl&gt; 4704, 405, 425, 453, 525, 301, 280, 279, 342, 307, 317, 3…
+## $ bac_female   &lt;dbl&gt; 5306, 362, 403, 436, 444, 324, 351, 386, 446, 388, 359, 3…
+## $ iac_male     &lt;dbl&gt; 277, 23, 27, 29, 23, 17, 14, 6, 29, 22, 22, 24, 11, 14, 7…
+## $ iac_female   &lt;dbl&gt; 314, 18, 19, 27, 20, 24, 12, 15, 22, 27, 25, 28, 14, 26, …
+## $ aac_male     &lt;dbl&gt; 300, 34, 32, 32, 39, 16, 12, 18, 38, 22, 22, 11, 8, 8, 5,…
+## $ aac_female   &lt;dbl&gt; 409, 28, 42, 37, 31, 12, 25, 40, 44, 41, 32, 20, 11, 14, …
+## $ nac_male     &lt;dbl&gt; 42, 3, 3, 4, 6, 5, 6, 3, 2, 3, 3, 0, 3, 0, 1, 0, 0, 0, 0,…
+## $ nac_female   &lt;dbl&gt; 37, 1, 4, 5, 5, 3, 3, 2, 3, 4, 5, 0, 0, 2, 0, 0, 0, 0, 0,…
+## $ nh_male      &lt;dbl&gt; 25875, 1778, 1933, 2105, 2153, 1474, 1477, 1533, 1948, 19…
+## $ nh_female    &lt;dbl&gt; 27386, 1651, 1916, 2055, 2026, 1499, 1570, 1674, 2108, 20…
+## $ nhwa_male    &lt;dbl&gt; 20709, 1337, 1460, 1613, 1580, 1141, 1180, 1234, 1547, 15…
+## $ nhwa_female  &lt;dbl&gt; 21485, 1260, 1465, 1570, 1543, 1151, 1184, 1245, 1610, 16…
+## $ nhba_male    &lt;dbl&gt; 4512, 356, 398, 421, 495, 291, 272, 273, 336, 301, 312, 3…
+## $ nhba_female  &lt;dbl&gt; 5091, 313, 372, 403, 420, 308, 347, 373, 429, 383, 348, 3…
+## $ nhia_male    &lt;dbl&gt; 103, 2, 12, 12, 12, 6, 1, 1, 8, 8, 11, 10, 7, 6, 3, 4, 0,…
+## $ nhia_female  &lt;dbl&gt; 115, 2, 2, 9, 5, 7, 3, 8, 7, 11, 11, 11, 9, 12, 8, 4, 6, …
+## $ nhaa_male    &lt;dbl&gt; 194, 13, 17, 22, 23, 8, 5, 12, 30, 16, 18, 10, 6, 7, 4, 2…
+## $ nhaa_female  &lt;dbl&gt; 280, 15, 21, 18, 14, 6, 23, 25, 29, 36, 26, 17, 9, 13, 8,…
+## $ nhna_male    &lt;dbl&gt; 13, 0, 0, 3, 1, 2, 1, 1, 1, 0, 3, 0, 1, 0, 0, 0, 0, 0, 0,…
+## $ nhna_female  &lt;dbl&gt; 9, 0, 3, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, …
+## $ nhtom_male   &lt;dbl&gt; 344, 70, 46, 34, 42, 26, 18, 12, 26, 18, 11, 14, 7, 9, 5,…
+## $ nhtom_female &lt;dbl&gt; 406, 61, 53, 55, 43, 26, 12, 23, 32, 18, 22, 18, 6, 14, 1…
+## $ nhwac_male   &lt;dbl&gt; 21026, 1402, 1506, 1643, 1616, 1166, 1196, 1245, 1571, 15…
+## $ nhwac_female &lt;dbl&gt; 21853, 1312, 1517, 1624, 1580, 1172, 1196, 1266, 1638, 16…
+## $ nhbac_male   &lt;dbl&gt; 4647, 396, 423, 440, 518, 299, 275, 275, 340, 304, 314, 3…
+## $ nhbac_female &lt;dbl&gt; 5258, 357, 400, 429, 439, 320, 348, 380, 442, 387, 354, 3…
+## $ nhiac_male   &lt;dbl&gt; 251, 19, 25, 24, 23, 15, 14, 6, 25, 20, 17, 23, 11, 14, 6…
+## $ nhiac_female &lt;dbl&gt; 282, 17, 12, 22, 18, 21, 12, 13, 20, 24, 24, 25, 13, 25, …
+## $ nhaac_male   &lt;dbl&gt; 291, 34, 30, 30, 37, 16, 10, 18, 38, 22, 21, 11, 8, 8, 5,…
+## $ nhaac_female &lt;dbl&gt; 398, 28, 39, 36, 30, 11, 25, 39, 42, 41, 31, 20, 11, 14, …
+## $ nhnac_male   &lt;dbl&gt; 23, 1, 1, 3, 3, 4, 1, 1, 1, 2, 3, 0, 2, 0, 1, 0, 0, 0, 0,…
+## $ nhnac_female &lt;dbl&gt; 27, 0, 4, 4, 4, 2, 1, 1, 1, 3, 5, 0, 0, 2, 0, 0, 0, 0, 0,…
+## $ h_male       &lt;dbl&gt; 694, 88, 68, 66, 60, 65, 66, 61, 56, 51, 34, 24, 20, 9, 1…
+## $ h_female     &lt;dbl&gt; 616, 62, 74, 64, 51, 42, 44, 62, 45, 39, 47, 21, 13, 15, …
+## $ hwa_male     &lt;dbl&gt; 586, 74, 61, 45, 48, 60, 54, 55, 49, 45, 25, 21, 17, 9, 9…
+## $ hwa_female   &lt;dbl&gt; 517, 56, 61, 50, 42, 33, 39, 53, 35, 34, 40, 16, 12, 12, …
+## $ hba_male     &lt;dbl&gt; 47, 6, 1, 10, 7, 2, 5, 3, 2, 2, 3, 2, 2, 0, 2, 0, 0, 0, 0…
+## $ hba_female   &lt;dbl&gt; 39, 4, 2, 3, 4, 4, 3, 5, 3, 1, 5, 2, 0, 2, 0, 1, 0, 0, 0,…
+## $ hia_male     &lt;dbl&gt; 16, 3, 2, 3, 0, 0, 0, 0, 3, 1, 3, 1, 0, 0, 0, 0, 0, 0, 0,…
+## $ hia_female   &lt;dbl&gt; 24, 1, 6, 3, 2, 2, 0, 2, 2, 3, 0, 1, 0, 1, 0, 1, 0, 0, 0,…
+## $ haa_male     &lt;dbl&gt; 6, 0, 0, 1, 2, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, …
+## $ haa_female   &lt;dbl&gt; 4, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, …
+## $ hna_male     &lt;dbl&gt; 16, 1, 1, 1, 3, 1, 5, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
+## $ hna_female   &lt;dbl&gt; 9, 0, 0, 1, 1, 1, 2, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, …
+## $ htom_male    &lt;dbl&gt; 23, 4, 3, 6, 0, 2, 0, 1, 1, 2, 2, 0, 1, 0, 1, 0, 0, 0, 0,…
+## $ htom_female  &lt;dbl&gt; 23, 1, 5, 7, 2, 1, 0, 1, 2, 0, 1, 2, 1, 0, 0, 0, 0, 0, 0,…
+## $ hwac_male    &lt;dbl&gt; 607, 77, 64, 51, 48, 62, 54, 56, 50, 47, 27, 21, 17, 9, 1…
+## $ hwac_female  &lt;dbl&gt; 538, 56, 66, 57, 44, 34, 39, 53, 37, 34, 41, 18, 13, 12, …
+## $ hbac_male    &lt;dbl&gt; 57, 9, 2, 13, 7, 2, 5, 4, 2, 3, 3, 2, 3, 0, 2, 0, 0, 0, 0…
+## $ hbac_female  &lt;dbl&gt; 48, 5, 3, 7, 5, 4, 3, 6, 4, 1, 5, 2, 0, 2, 0, 1, 0, 0, 0,…
+## $ hiac_male    &lt;dbl&gt; 26, 4, 2, 5, 0, 2, 0, 0, 4, 2, 5, 1, 0, 0, 1, 0, 0, 0, 0,…
+## $ hiac_female  &lt;dbl&gt; 32, 1, 7, 5, 2, 3, 0, 2, 2, 3, 1, 3, 1, 1, 0, 1, 0, 0, 0,…
+## $ haac_male    &lt;dbl&gt; 9, 0, 2, 2, 2, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, …
+## $ haac_female  &lt;dbl&gt; 11, 0, 3, 1, 1, 1, 0, 1, 2, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0,…
+## $ hnac_male    &lt;dbl&gt; 19, 2, 2, 1, 3, 1, 5, 2, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0,…
+## $ hnac_female  &lt;dbl&gt; 10, 1, 0, 1, 1, 1, 2, 1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,…</code></pre>
+</div>
+<div id="overview-of-the-raw-data" class="section level2">
+<h2>Overview of the raw data</h2>
+<p>There are 776321 rows and 80 columns in the downloaded dataframe. The file layout is available <a href="https://www2.census.gov/programs-surveys/popest/technical-documentation/file-layouts/2010-2020/cc-est2020-alldata.pdf">here</a>.</p>
+<p>Here are the columns that we will need to have a dataset with necessary age-categories and subgroups for YPLL calculation.</p>
+<ul>
+<li><p><code>state</code>: state FIPS code</p></li>
+<li><p><code>county</code>: county FIPS code</p></li>
+<li><p><code>year</code>: Year of data</p>
+<p>The key for YEAR is as follows:</p>
+<ul>
+<li><p>1 = 4/1/2010 Census population</p></li>
+<li><p>2 = 4/1/2010 population estimates base</p></li>
+<li><p>3 = 7/1/2010 population estimate</p></li>
+<li><p>4 = 7/1/2011 population estimate</p></li>
+<li><p>5 = 7/1/2012 population estimate</p></li>
+<li><p>6 = 7/1/2013 population estimate</p></li>
+<li><p>7 = 7/1/2014 population estimate</p></li>
+<li><p>8 = 7/1/2015 population estimate</p></li>
+<li><p>9 = 7/1/2016 population estimate</p></li>
+<li><p>10 = 7/1/2017 population estimate</p></li>
+<li><p>11 = 7/1/2018 population estimate</p></li>
+<li><p>12 = 7/1/2019 population estimate</p></li>
+<li><p>13 = 7/1/2020 population estimate</p></li>
+</ul></li>
+</ul>
+<p>We will subset the original data with <code>year == 13</code> to get 2020 population estimate.</p>
+<ul>
+<li><p><code>agegrp</code>: Age group</p>
+<p>0 = Total</p>
+<p>1 = Age 0 to 4 years</p>
+<p>2 = Age 5 to 9 years</p>
+<p>3 = Age 10 to 14 years</p>
+<p>4 = Age 15 to 19 years</p>
+<p>5 = Age 20 to 24 years</p>
+<p>6 = Age 25 to 29 years</p>
+<p>7 = Age 30 to 34 years</p>
+<p>8 = Age 35 to 39 years</p>
+<p>9 = Age 40 to 44 years</p>
+<p>10 = Age 45 to 49 years</p>
+<p>11 = Age 50 to 54 years</p>
+<p>12 = Age 55 to 59 years</p>
+<p>13 = Age 60 to 64 years</p>
+<p>14 = Age 65 to 69 years</p>
+<p>15 = Age 70 to 74 years</p>
+<p>16 = Age 75 to 79 years</p>
+<p>17 = Age 80 to 84 years</p>
+<p>18 = Age 85 years or older</p></li>
+</ul>
+<p>We need <code>agegrp</code> from 1 to 15 to create age categories shown in Table 1. One <strong>challenge</strong> is how we can get infant population (age_cat = 0) from a dataset with 5-year age groups. One way is to approximate the infant population by taking 20% of population in <code>agegrp = 1</code> (age 0 to 4 years), assuming the data has a uniform distribution within this age group. This approach is not ideal, but it may be a realistic option for most counties. A possible better way to have infant population is to use births data for each county, which is out of the scope for this post.</p>
+<div class="figure"><span style="display:block;" id="fig:unnamed-chunk-4"></span>
+<img src="age_groups.png" alt="Construct age categories for YPLL calculation" width="80%" />
+<p class="caption">
+Figure 1: Construct age categories for YPLL calculation
+</p>
+</div>
+<ul>
+<li>columns for race/ethnicity groups</li>
+</ul>
+<p>Table 3 shows the columns in the raw data that we need to create the subgroups in Table 2.</p>
+<hr />
+<table class="table table-striped table-hover" style>
+<caption>
+<span id="tab:unnamed-chunk-5">Table 3: </span>Columns needed to create subgroups
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+column
+</th>
+<th style="text-align:left;">
+description
+</th>
+<th style="text-align:right;">
+subgroup
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+NHWA_MALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, White alone male population
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHWA_FEMALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, White alone female population
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHBA_MALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, Black or African American alone male population
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHBA_FEMALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, Black or African American alone female population
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHIA_MALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, American Indian and Alaska Native alone male population
+</td>
+<td style="text-align:right;">
+3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHIA_FEMALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, American Indian and Alaska Native alone female population
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHAA_MALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, Asian alone male population
+</td>
+<td style="text-align:right;">
+4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHAA_FEMALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, Asian alone female population
+</td>
+<td style="text-align:right;">
+4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHNA_MALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, Native Hawaiian and Other Pacific Islander alone male population
+</td>
+<td style="text-align:right;">
+4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+NHNA_FEMALE
+</td>
+<td style="text-align:left;">
+Not Hispanic, Native Hawaiian and Other Pacific Islander alone female population
+</td>
+<td style="text-align:right;">
+4
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+H_MALE
+</td>
+<td style="text-align:left;">
+Hispanic male population
+</td>
+<td style="text-align:right;">
+8
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+H_FEMALE
+</td>
+<td style="text-align:left;">
+Hispanic female population
+</td>
+<td style="text-align:right;">
+8
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="get-subgroup-population-by-age-category" class="section level1">
+<h1>Get subgroup population by age category</h1>
+<div id="subset-the-raw-data-keep-only-needed-columns" class="section level2">
+<h2>subset the raw data, keep only needed columns</h2>
+<pre class="r"><code>cc_2020_agegrp_sig_r &lt;- cc_est2020_all |&gt; 
+  # get 2020 data with agegrp from 1 to 15
+  filter(year == 13, agegrp %in% c(1:15)) |&gt; 
+  select(statecode = state, countycode = county, agegrp,
+         starts_with(&quot;nhwa_&quot;), # Not Hispanic, White alone
+         starts_with(&quot;nhba_&quot;), # Not Hispanic, Black or African American alone
+         starts_with(&quot;nhia_&quot;), # Not Hispanic, American Indian and Alaska Native alone
+         starts_with(&quot;nhaa_&quot;), # Not Hispanic, Asian alone
+         starts_with(&quot;nhna_&quot;), # Not Hispanic, Native Hawaiian and Other Pacific Islander alone
+         starts_with(&quot;h_&quot;) # Hispanic
+         ) |&gt; 
+  mutate(white = nhwa_male + nhwa_female,
+         black = nhba_male + nhba_female,
+         aian = nhia_male + nhia_female,
+         asian = nhaa_male + nhaa_female + nhna_male + nhna_female,
+         hispanic = h_male + h_female
+         ) |&gt; 
+  select(-c(4:15))
+
+cc_2020_agegrp_sig_r |&gt; head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 8
+##   statecode countycode agegrp white black  aian asian hispanic
+##   &lt;chr&gt;     &lt;chr&gt;       &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01        001             1  2252   743     6    48      161
+## 2 01        001             2  2358   752    14    49      161
+## 3 01        001             3  2580   878    18    34      169
+## 4 01        001             4  2494   817     8    51      145
+## 5 01        001             5  2179   715     8    42      112</code></pre>
+</div>
+<div id="county-population-by-age-categories-and-raceethnicity-subgroups" class="section level2">
+<h2>County population by age categories and race/ethnicity subgroups</h2>
+<div id="age_cat-2-7" class="section level3">
+<h3>age_cat = 2-7</h3>
+<pre class="r"><code># 15-74: age cat 2-7
+cc_2020_sg_r_agecat_2_7 &lt;- cc_2020_agegrp_sig_r |&gt; 
+  filter(agegrp %in% c(4:15)) |&gt; 
+  mutate(age_cat = case_when(
+    agegrp %in% c(4, 5) ~ 2, # 15-19, 19-24
+    agegrp %in% c(6, 7) ~ 3, # 25-29, 30-34
+    agegrp %in% c(8, 9) ~ 4, # 35-39, 40-44
+    agegrp %in% c(10, 11) ~ 5, # 45-49, 50-54
+    agegrp %in% c(12, 13) ~ 6, # 55-59, 60-64
+    agegrp %in% c(14, 15) ~ 7, # 65-69, 70-74
+  )) |&gt; 
+  select(-agegrp) |&gt; 
+  group_by(statecode, countycode, age_cat) |&gt; 
+  summarise(across(c(white, black, aian, asian, hispanic), ~sum(., na.rm = TRUE)), .groups = &quot;drop&quot;)
+
+cc_2020_sg_r_agecat_2_7 |&gt; head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 8
+##   statecode countycode age_cat white black  aian asian hispanic
+##   &lt;chr&gt;     &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01        001              2  4673  1532    16    93      257
+## 2 01        001              3  5294  1684    27    80      274
+## 3 01        001              4  5168  1654    23   134      304
+## 4 01        001              5  5547  1497    34   109      187
+## 5 01        001              6  5756  1335    44    61      119</code></pre>
+</div>
+<div id="age_cat-0-infant-population" class="section level3">
+<h3>age_cat = 0: infant population</h3>
+<p>Take 1/5 of population in agegrp = 1</p>
+<pre class="r"><code># age_cat = 0, infants
+cc_2020_sg_r_agecat_0 &lt;- cc_2020_agegrp_sig_r |&gt; 
+  filter(agegrp %in% c(1)) |&gt; 
+  mutate(age_cat = 0, .after = 3) |&gt; 
+  select(-agegrp) |&gt; 
+  mutate(across(c(4:8), ~ .x/5))
+
+cc_2020_sg_r_agecat_0 |&gt; head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 8
+##   statecode countycode age_cat  white black  aian asian hispanic
+##   &lt;chr&gt;     &lt;chr&gt;        &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01        001              0  450.  149.    1.2   9.6     32.2
+## 2 01        003              0 1787.  251    11    30.4    209. 
+## 3 01        005              0   85.2 140     1     0.4     27  
+## 4 01        007              0  175.   44.8   0.6   0       13  
+## 5 01        009              0  543.   10.2   2     6.4    105.</code></pre>
+</div>
+<div id="age_cat-1-1-14-year" class="section level3">
+<h3>age_cat = 1: 1-14 year</h3>
+<pre class="r"><code># age_cat = 1: 1-14
+cc_2020_sg_r_agecat_1 &lt;- cc_2020_agegrp_sig_r |&gt; 
+  filter(agegrp %in% c(1:3)) |&gt; 
+  mutate(across(c(4:8), ~if_else(agegrp==1, . * 4/5, .))) |&gt;   
+  group_by(statecode, countycode) |&gt; 
+  summarise(across(c(2:6), ~ sum(., na.rm = TRUE)), .groups = &quot;drop&quot;) |&gt; 
+  ungroup() |&gt; 
+  mutate(age_cat = 1, .after = 3)
+
+cc_2020_sg_r_agecat_1 |&gt; head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 8
+##   statecode countycode  white age_cat black  aian asian hispanic
+##   &lt;chr&gt;     &lt;chr&gt;       &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01        001         6740.       1 2224.  36.8 121.      459.
+## 2 01        003        28270.       1 3746  195   491.     2965.
+## 3 01        005         1310.       1 2033    7    24.6     405 
+## 4 01        007         2476.       1  626.  12.4   4       157 
+## 5 01        009         8031.       1  166.  24    56.6    1615.</code></pre>
+</div>
+<div id="all-age-categories" class="section level3">
+<h3>all age categories</h3>
+<pre class="r"><code>cc_2020_sg_r_agecat_0_7 &lt;- bind_rows(
+  cc_2020_sg_r_agecat_0,
+  cc_2020_sg_r_agecat_1,
+  cc_2020_sg_r_agecat_2_7) |&gt;
+  arrange(statecode, countycode, age_cat) |&gt;  
+  # round numbers
+  mutate(across(c(4:8), ~round(.)))
+
+cc_2020_sg_r_agecat_0_7 |&gt; 
+  head(5)</code></pre>
+<pre><code>## # A tibble: 5 × 8
+##   statecode countycode age_cat white black  aian asian hispanic
+##   &lt;chr&gt;     &lt;chr&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01        001              0   450   149     1    10       32
+## 2 01        001              1  6740  2224    37   121      459
+## 3 01        001              2  4673  1532    16    93      257
+## 4 01        001              3  5294  1684    27    80      274
+## 5 01        001              4  5168  1654    23   134      304</code></pre>
+</div>
+<div id="pivot-tabel-longer-so-that-we-have-one-column-of-subgroup-codes-and-one-column-for-population" class="section level3">
+<h3>Pivot tabel longer so that we have one column of subgroup codes and one column for population</h3>
+<pre class="r"><code>cc_2020_sg_r_agecat_0_7_long &lt;- cc_2020_sg_r_agecat_0_7 |&gt; 
+  pivot_longer(cols = c(4:8), names_to = &quot;race&quot;, values_to = &quot;pop&quot;) |&gt; 
+  mutate(race = case_when(
+    race == &quot;white&quot; ~ 1,
+    race == &quot;black&quot; ~ 2,
+    race == &quot;aian&quot; ~ 3,
+    race == &quot;asian&quot; ~ 4,
+    race == &quot;hispanic&quot; ~ 8,
+    TRUE ~ NA_real_))</code></pre>
+<p>Let’s take a look at the top 20 rows.</p>
+<pre class="r"><code># top 20 rows
+cc_2020_sg_r_agecat_0_7_long |&gt; 
+  head(50) |&gt;
+  print_kbl()</code></pre>
+<table class="table table-striped table-hover" style="width: auto !important; ">
+<caption>
+<span id="tab:unnamed-chunk-12">Table 4: </span>
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+statecode
+</th>
+<th style="text-align:left;">
+countycode
+</th>
+<th style="text-align:right;">
+age_cat
+</th>
+<th style="text-align:right;">
+race
+</th>
+<th style="text-align:right;">
+pop
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+450
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+149
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+1
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+10
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+32
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+6740
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+2224
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+37
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+121
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+459
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+4673
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1532
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+16
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+93
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+257
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+5294
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1684
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+27
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+80
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+274
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+5168
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1654
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+23
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+134
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+304
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+5547
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1497
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+34
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+109
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+5
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+187
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+5756
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+1335
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+44
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+61
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+6
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+119
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+4181
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+865
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+30
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+38
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+001
+</td>
+<td style="text-align:right;">
+7
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+59
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1787
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+251
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+11
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+30
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+0
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+209
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+28270
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+2
+</td>
+<td style="text-align:right;">
+3746
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+3
+</td>
+<td style="text-align:right;">
+195
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+4
+</td>
+<td style="text-align:right;">
+491
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+01
+</td>
+<td style="text-align:left;">
+003
+</td>
+<td style="text-align:right;">
+1
+</td>
+<td style="text-align:right;">
+8
+</td>
+<td style="text-align:right;">
+2965
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>This post shows the feasibility to create a dataset of county-level population estimates by age categories and subgroups, which might be useful for YPLL calcuations.</p>
+</div>
