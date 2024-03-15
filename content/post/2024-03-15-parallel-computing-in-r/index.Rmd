@@ -1,0 +1,347 @@
+---
+title: Parallel Computing in R
+author: GL
+date: '2024-03-15'
+slug: parallel-computing-in-r
+categories:
+  - R
+tags:
+  - R
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(kableExtra)
+
+print_kbl <- function(df, title="", f_width=FALSE){
+  df |> 
+    kbl(caption = title) |> 
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = f_width, position = "left")
+}
+```
+
+# Introduction
+
+As datasets grow in size and analyses become more complex, the need for efficient computing becomes increasingly crucial. Parallel computing offers a solution by leveraging multiple processors or cores to execute tasks simultaneously, thereby reducing computation time. In this post, we will explore how to harness the power of parallel computing in R using packages, including `foreach` and `furrr`.
+
+# Why Parallel Computing
+
+Before delving into the specifics, it is essential to grasp the concept of parallel computing. Traditional computing involves executing tasks sequentially, one after the other. Parallel computing, on the other hand, allows tasks to be executed concurrently, utilizing multiple resources simultaneously. This can lead to significant improvements in efficiency and performance, particularly when dealing with large amount of data or computationally intensive operations. 
+
+# Parallelize with `foreach` and `doParallel`
+
+The `foreach` package and the for loop in R serve similar purposes - facilitate iteration over elements in a collection. However, they differ significantly in their approach and functionality. The `foreach` package offers enhanced functionality, particularly in terms of parallel computing.
+
+The `foreach` package provides a simple and flexible framework for parallelizing R code. It allows users to iterate over elements in a collection (such as a vector or a list) in parallel, distributing the workload across multiple processors or cores. The 'foreach' package works seamlessly with various parallel backend engines, including `multicore`, `snow`, and `parallel`, making it adaptable to different computing environments.
+
+Here's a basic example of how to use `foreach` for parallel computing:
+
+```{r warning=FALSE}
+# Number of cores on the machine
+numCores <- parallel::detectCores()
+print(paste0("Number of cores: ", numCores))
+
+library(foreach)
+library(doParallel)
+
+registerDoParallel(numCores)  # use multicore, set to the number of our cores
+
+foreach (i=1:5, .combine = c) %dopar% {
+  sqrt(i)
+}
+
+```
+
+In this example, the square root function is applied to each element of the vector 1:5 in parallel using the `%dopar%` operator. The  `registerDoParallel` function registers `doParallel` as the parallel backend.
+
+# The `furrr` Package
+
+While `foreach` offers a powerful parallel-computing interface for iterations (particularly, for loops), the `furrr` package provides a functional programming interface that integrates with the `tidyverse` ecosystem. This makes it particularly well-suited for parallelizing operations within pipelines or when working with data frames.
+
+Here's a simple example of how to use `furrr` to parallelize operations:
+
+```{r}
+library(furrr)
+library(purrr)
+
+# Enable parallel execution
+plan(multisession, workers = numCores) # Use 4 worker sessions for parallelization
+
+# Define a function to be applied in parallel
+square <- function(x) {
+  return(x^2)
+}
+
+# Alternatively, parallelize operations within a pipeline
+result <- 1:5 %>%
+  future_map_dbl(square)
+
+result
+```
+
+In this example, the plan function specifies the parallel execution strategy, and `future_map_dbl` allows parallelization within a pipeline, making it easy to incorporate parallel computing into existing workflows.
+
+# A More Practical Example
+
+Let us explore an more complex example and see the benefits of parallel computing. We will use the CHRR 2023 [trend data in csv format](https://www.countyhealthrankings.org/sites/default/files/media/document/chr_trends_csv_2023.csv) and do linear regressions for over 3000 counties. We can either download the data and read into R or directly read from the url. Note that we will only do a very simplified trend calculation, and the actual trend calculations in the CHRR annual release are much more complicated.   
+
+## Get data
+
+There are over 660,000 rows and 15 columns in the trend data. We will use these 5 columns: 'measureid', 'yearspan','statecode', 'countycode', and 'rawvalue'. For simplicity, we will remove rows with 'rawvalue' not missing for county level data (i.e., 'countycode' not '000').
+
+```{r}
+trend_data <- readr::read_csv("https://www.countyhealthrankings.org/sites/default/files/media/document/chr_trends_csv_2023.csv",
+                              show_col_types = FALSE) %>% 
+  select(measureid, yearspan, statecode, countycode, rawvalue) %>% 
+  filter(!is.na(rawvalue), countycode != '000') %>% 
+  glimpse()
+
+```
+
+We still have almost 640,000 rows. Let us explore the data a little bit more.
+
+-   Number of counties: 3143
+
+```{r}
+trend_data %>% 
+  distinct(statecode, countycode) %>% 
+  count()
+```
+
+-   Number of measures: 15
+
+```{r}
+trend_data %>% 
+  distinct(measureid) %>% 
+  count()
+```
+
+We will find the trend for each county by each measure using linear regression $y = kx + b$ ('year' will be x, and 'rawvalue' will be y). Not all counties have data for all 15 measures. But still, we will need to do ~40,000 linear regressions.
+
+```{r}
+trend_data %>% head()
+```
+
+## Prepare data
+
+-   Construct a column 'fipscode' as an ID for each county, and remove 'statecode', 'countycode'
+-   Extract 'year' from 'yearspan'
+-   Centralize the years so that the central year is 0; 'year' will be used as the 'x' in the linear regression. 
+
+```{r}
+trend_data_clean <- trend_data %>% 
+  mutate(fipscode = paste0(statecode, countycode), .before = 1) %>% 
+  select(-c(statecode, countycode)) %>% 
+  separate(yearspan, into = c('year1', 'year2')) %>% 
+  mutate(year = case_when(
+    is.na(year2) ~ as.numeric(year1),
+    TRUE ~ (as.numeric(year1) + as.numeric(year2))/2
+  )) %>% 
+  mutate(year = round(scale(year, scale = FALSE), digits = 1) ) %>% 
+  select(-c(year1, year2))
+
+trend_data_clean 
+```
+
+Let us create a list of county FIPS codes, which will be used later. 
+
+```{r}
+cnty_list <- trend_data_clean %>% 
+  distinct(fipscode) %>% 
+  pull(fipscode)
+
+```
+
+## lm() for one county, one measure
+
+We will use county '01001' and measure 1 as an example. Our goal is to get estimates and p-values for intercept and x (i.e., 'year').
+
+```{r}
+cnyt_test <- trend_data_clean %>% 
+  filter(fipscode == "01001", measureid == 1)
+
+cnyt_test
+```
+
+```{r}
+lm_test <-  lm(rawvalue ~ year, data = cnyt_test)
+
+lm_test %>% 
+  broom::tidy() 
+```
+
+We want to save `estimate` and `p.value` from the regression. Let us wrap the above code into a function.
+
+```{r}
+get_county_reg <- function(df_cnty){
+  
+  cnty_reg <-  lm(rawvalue ~ year, data = df_cnty)
+  
+  return(
+    cnty_reg %>% 
+      broom::tidy() %>% 
+      select(term, estimate, p_value=p.value)
+  )
+} 
+```
+
+Let us now test this function.
+
+```{r}
+get_county_reg(df_cnty = cnyt_test)
+```
+
+It looks good. 
+
+## lm() for one county for all 15 measures
+
+The function `get_county_reg` returns a dataframe. We can use the idea of ` list-column data structure` in Chapter 25 in the 1st ediction of the book [R for Data Science](https://r4ds.had.co.nz/many-models.html) and save the model results as dataframes in a dataframe. 
+
+And we want to have regression results of 15 measures for a county.
+
+```{r}
+cnty_test_15m <- trend_data_clean %>% 
+  filter(fipscode == "01001") %>% 
+  group_by(fipscode, measureid) %>% 
+  nest() %>%  
+  mutate(model_res = map(data, get_county_reg)) %>% 
+  ungroup()
+
+cnty_test_15m
+```
+
+Let us check the results in column 'model_res'. 
+
+```{r}
+cnty_test_15m$model_res[[1]]
+```
+
+Yes, the results are there. Let us wrap this part as a function.To be more efficient, we can remove the column data after regression is done. We will do that in the function below.
+
+```{r}
+get_cnty_reg_15_m <- function(df_trend, cnty_fipscode){
+  
+  cnty_reg_15m <- df_trend %>% 
+    filter(fipscode == cnty_fipscode) %>% 
+    group_by(fipscode, measureid) %>% 
+    nest() %>% 
+    mutate(model_res = map(data, get_county_reg)) %>% 
+    ungroup() %>% 
+    select(-data)
+  
+  return(cnty_reg_15m)
+  
+}
+```
+
+Test function: 
+
+```{r}
+get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = "01001")
+```
+
+It worked. Let us now do lm() for all counties and all measures, exploring both sequential and parallel ways.
+
+## for loop
+
+We will first use a for loop and time the process. It took about 4 minutes.
+
+```{r}
+tictoc::tic()
+
+n <- length(cnty_list)
+
+# create an empty list to save results
+lst_trend_res <- vector("list", length = n)
+
+for (i in 1:n) {
+  # print(paste0("i=", i, "  ", cnty_list[i]) )
+  
+   # call function to do regression
+  dat <- get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = cnty_list[i])
+  
+  # save data to list 
+  lst_trend_res[[i]] <- dat
+}
+
+# bind rows for each dataset
+all_trend_res_1 <- bind_rows(lst_trend_res ) %>% 
+  unnest(model_res)
+
+tictoc::toc()
+```
+
+```{r}
+all_trend_res_1 %>% head()
+```
+
+## map
+
+Now, we will try `purrr::map()`. A little faster than for loop. And the code is cleaner.
+
+```{r}
+tictoc::tic()
+
+all_trend_res_2 <- cnty_list %>% 
+  map( ~get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = .)) %>% 
+  list_rbind() %>% 
+  unnest(model_res)
+
+tictoc::toc() 
+```
+
+## foreach
+
+Now let see if we can save time by parallazing the process with `foreach`. Yes, we can: the time dropped to ~ 1 minute.
+
+```{r}
+tictoc::tic()
+
+n <- length(cnty_list)
+
+all_trend_res_3 <-  
+  foreach (i= 1:n, 
+         .combine=rbind,
+         .packages='tidyverse') %dopar% {
+   # call function to do regression
+  get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = cnty_list[i])
+
+}
+
+all_trend_res_3 <- all_trend_res_3 %>%
+  unnest(model_res)
+
+tictoc::toc()
+```
+```{r}
+all_trend_res_3 %>% 
+  head()
+```
+
+## future_map
+
+Finally, let us try `future_map`. Less than 1 minute, even faster than as `foreach`. Again, the code is cleaner. 
+
+```{r}
+tictoc::tic()
+
+all_trend_res_4 <- cnty_list %>% 
+  future_map( ~get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = .)) %>% 
+  list_rbind() %>% 
+  unnest(model_res)
+
+tictoc::toc()
+```
+
+```{r}
+all_trend_res_4 %>% head()
+```
+
+# Conclusion
+
+Parallel computing offers a powerful means of accelerating R code, enabling faster and more efficient data analysis. The `foreach` and `furrr` packages provide convenient interfaces for parallelizing operations, whether iterating over elements in a collection or within a pipeline. By harnessing the power of parallel computing, we can tackle larger datasets and more complex analyses with efficiency, unlocking new possibilities for exploration and discovery in R.

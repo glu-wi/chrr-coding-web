@@ -1,0 +1,408 @@
+---
+title: Parallel Computing in R
+author: GL
+date: '2024-03-15'
+slug: parallel-computing-in-r
+categories:
+  - R
+tags:
+  - R
+---
+
+
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>As datasets grow in size and analyses become more complex, the need for efficient computing becomes increasingly crucial. Parallel computing offers a solution by leveraging multiple processors or cores to execute tasks simultaneously, thereby reducing computation time. In this post, we will explore how to harness the power of parallel computing in R using packages, including <code>foreach</code> and <code>furrr</code>.</p>
+</div>
+<div id="why-parallel-computing" class="section level1">
+<h1>Why Parallel Computing</h1>
+<p>Before delving into the specifics, it is essential to grasp the concept of parallel computing. Traditional computing involves executing tasks sequentially, one after the other. Parallel computing, on the other hand, allows tasks to be executed concurrently, utilizing multiple resources simultaneously. This can lead to significant improvements in efficiency and performance, particularly when dealing with large amount of data or computationally intensive operations.</p>
+</div>
+<div id="parallelize-with-foreach-and-doparallel" class="section level1">
+<h1>Parallelize with <code>foreach</code> and <code>doParallel</code></h1>
+<p>The <code>foreach</code> package and the for loop in R serve similar purposes - facilitate iteration over elements in a collection. However, they differ significantly in their approach and functionality. The <code>foreach</code> package offers enhanced functionality, particularly in terms of parallel computing.</p>
+<p>The <code>foreach</code> package provides a simple and flexible framework for parallelizing R code. It allows users to iterate over elements in a collection (such as a vector or a list) in parallel, distributing the workload across multiple processors or cores. The ‘foreach’ package works seamlessly with various parallel backend engines, including <code>multicore</code>, <code>snow</code>, and <code>parallel</code>, making it adaptable to different computing environments.</p>
+<p>Here’s a basic example of how to use <code>foreach</code> for parallel computing:</p>
+<pre class="r"><code># Number of cores on the machine
+numCores &lt;- parallel::detectCores()
+print(paste0(&quot;Number of cores: &quot;, numCores))</code></pre>
+<pre><code>## [1] &quot;Number of cores: 8&quot;</code></pre>
+<pre class="r"><code>library(foreach)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;foreach&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:purrr&#39;:
+## 
+##     accumulate, when</code></pre>
+<pre class="r"><code>library(doParallel)</code></pre>
+<pre><code>## Loading required package: iterators</code></pre>
+<pre><code>## Loading required package: parallel</code></pre>
+<pre class="r"><code>registerDoParallel(numCores)  # use multicore, set to the number of our cores
+
+foreach (i=1:5, .combine = c) %dopar% {
+  sqrt(i)
+}</code></pre>
+<pre><code>## [1] 1.000000 1.414214 1.732051 2.000000 2.236068</code></pre>
+<p>In this example, the square root function is applied to each element of the vector 1:5 in parallel using the <code>%dopar%</code> operator. The <code>registerDoParallel</code> function registers <code>doParallel</code> as the parallel backend.</p>
+</div>
+<div id="the-furrr-package" class="section level1">
+<h1>The <code>furrr</code> Package</h1>
+<p>While <code>foreach</code> offers a powerful parallel-computing interface for iterations (particularly, for loops), the <code>furrr</code> package provides a functional programming interface that integrates with the <code>tidyverse</code> ecosystem. This makes it particularly well-suited for parallelizing operations within pipelines or when working with data frames.</p>
+<p>Here’s a simple example of how to use <code>furrr</code> to parallelize operations:</p>
+<pre class="r"><code>library(furrr)</code></pre>
+<pre><code>## Loading required package: future</code></pre>
+<pre class="r"><code>library(purrr)
+
+# Enable parallel execution
+plan(multisession, workers = numCores) # Use 4 worker sessions for parallelization
+
+# Define a function to be applied in parallel
+square &lt;- function(x) {
+  return(x^2)
+}
+
+# Alternatively, parallelize operations within a pipeline
+result &lt;- 1:5 %&gt;%
+  future_map_dbl(square)
+
+result</code></pre>
+<pre><code>## [1]  1  4  9 16 25</code></pre>
+<p>In this example, the plan function specifies the parallel execution strategy, and <code>future_map_dbl</code> allows parallelization within a pipeline, making it easy to incorporate parallel computing into existing workflows.</p>
+</div>
+<div id="a-more-practical-example" class="section level1">
+<h1>A More Practical Example</h1>
+<p>Let us explore an more complex example and see the benefits of parallel computing. We will use the CHRR 2023 <a href="https://www.countyhealthrankings.org/sites/default/files/media/document/chr_trends_csv_2023.csv">trend data in csv format</a> and do linear regressions for over 3000 counties. We can either download the data and read into R or directly read from the url. Note that we will only do a very simplified trend calculation, and the actual trend calculations in the CHRR annual release are much more complicated.</p>
+<div id="get-data" class="section level2">
+<h2>Get data</h2>
+<p>There are over 660,000 rows and 15 columns in the trend data. We will use these 5 columns: ‘measureid’, ‘yearspan’,‘statecode’, ‘countycode’, and ‘rawvalue’. For simplicity, we will remove rows with ‘rawvalue’ not missing for county level data (i.e., ‘countycode’ not ‘000’).</p>
+<pre class="r"><code>trend_data &lt;- readr::read_csv(&quot;https://www.countyhealthrankings.org/sites/default/files/media/document/chr_trends_csv_2023.csv&quot;,
+                              show_col_types = FALSE) %&gt;% 
+  select(measureid, yearspan, statecode, countycode, rawvalue) %&gt;% 
+  filter(!is.na(rawvalue), countycode != &#39;000&#39;) %&gt;% 
+  glimpse()</code></pre>
+<pre><code>## Rows: 639,621
+## Columns: 5
+## $ measureid  &lt;dbl&gt; 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,…
+## $ yearspan   &lt;chr&gt; &quot;1997-1999&quot;, &quot;1998-2000&quot;, &quot;1999-2001&quot;, &quot;2000-2002&quot;, &quot;2001-2…
+## $ statecode  &lt;chr&gt; &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;, &quot;01&quot;,…
+## $ countycode &lt;chr&gt; &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;001&quot;, &quot;00…
+## $ rawvalue   &lt;dbl&gt; 8723.90, 8269.20, 7816.80, 8936.80, 9427.10, 9562.90, 9326.…</code></pre>
+<p>We still have almost 640,000 rows. Let us explore the data a little bit more.</p>
+<ul>
+<li>Number of counties: 3143</li>
+</ul>
+<pre class="r"><code>trend_data %&gt;% 
+  distinct(statecode, countycode) %&gt;% 
+  count()</code></pre>
+<pre><code>## # A tibble: 1 × 1
+##       n
+##   &lt;int&gt;
+## 1  3143</code></pre>
+<ul>
+<li>Number of measures: 15</li>
+</ul>
+<pre class="r"><code>trend_data %&gt;% 
+  distinct(measureid) %&gt;% 
+  count()</code></pre>
+<pre><code>## # A tibble: 1 × 1
+##       n
+##   &lt;int&gt;
+## 1    15</code></pre>
+<p>We will find the trend for each county by each measure using linear regression <span class="math inline">\(y = kx + b\)</span> (‘year’ will be x, and ‘rawvalue’ will be y). Not all counties have data for all 15 measures. But still, we will need to do ~40,000 linear regressions.</p>
+<pre class="r"><code>trend_data %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 × 5
+##   measureid yearspan  statecode countycode rawvalue
+##       &lt;dbl&gt; &lt;chr&gt;     &lt;chr&gt;     &lt;chr&gt;         &lt;dbl&gt;
+## 1         1 1997-1999 01        001           8724.
+## 2         1 1998-2000 01        001           8269.
+## 3         1 1999-2001 01        001           7817.
+## 4         1 2000-2002 01        001           8937.
+## 5         1 2001-2003 01        001           9427.
+## 6         1 2002-2004 01        001           9563.</code></pre>
+</div>
+<div id="prepare-data" class="section level2">
+<h2>Prepare data</h2>
+<ul>
+<li>Construct a column ‘fipscode’ as an ID for each county, and remove ‘statecode’, ‘countycode’</li>
+<li>Extract ‘year’ from ‘yearspan’</li>
+<li>Centralize the years so that the central year is 0; ‘year’ will be used as the ‘x’ in the linear regression.</li>
+</ul>
+<pre class="r"><code>trend_data_clean &lt;- trend_data %&gt;% 
+  mutate(fipscode = paste0(statecode, countycode), .before = 1) %&gt;% 
+  select(-c(statecode, countycode)) %&gt;% 
+  separate(yearspan, into = c(&#39;year1&#39;, &#39;year2&#39;)) %&gt;% 
+  mutate(year = case_when(
+    is.na(year2) ~ as.numeric(year1),
+    TRUE ~ (as.numeric(year1) + as.numeric(year2))/2
+  )) %&gt;% 
+  mutate(year = round(scale(year, scale = FALSE), digits = 1) ) %&gt;% 
+  select(-c(year1, year2))</code></pre>
+<pre><code>## Warning: Expected 2 pieces. Missing pieces filled with `NA` in 573431 rows [66191,
+## 66192, 66193, 66194, 66195, 66196, 66197, 66198, 66199, 66200, 66201, 66202,
+## 66203, 66204, 66205, 66206, 66207, 66208, 66209, 66210, ...].</code></pre>
+<pre class="r"><code>trend_data_clean </code></pre>
+<pre><code>## # A tibble: 639,621 × 4
+##    fipscode measureid rawvalue year[,1]
+##    &lt;chr&gt;        &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+##  1 01001            1    8724.      -15
+##  2 01001            1    8269.      -14
+##  3 01001            1    7817.      -13
+##  4 01001            1    8937.      -12
+##  5 01001            1    9427.      -11
+##  6 01001            1    9563.      -10
+##  7 01001            1    9327.       -9
+##  8 01001            1    9577.       -8
+##  9 01001            1    9712.       -7
+## 10 01001            1    9647.       -6
+## # ℹ 639,611 more rows</code></pre>
+<p>Let us create a list of county FIPS codes, which will be used later.</p>
+<pre class="r"><code>cnty_list &lt;- trend_data_clean %&gt;% 
+  distinct(fipscode) %&gt;% 
+  pull(fipscode)</code></pre>
+</div>
+<div id="lm-for-one-county-one-measure" class="section level2">
+<h2>lm() for one county, one measure</h2>
+<p>We will use county ‘01001’ and measure 1 as an example. Our goal is to get estimates and p-values for intercept and x (i.e., ‘year’).</p>
+<pre class="r"><code>cnyt_test &lt;- trend_data_clean %&gt;% 
+  filter(fipscode == &quot;01001&quot;, measureid == 1)
+
+cnyt_test</code></pre>
+<pre><code>## # A tibble: 22 × 4
+##    fipscode measureid rawvalue year[,1]
+##    &lt;chr&gt;        &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+##  1 01001            1    8724.      -15
+##  2 01001            1    8269.      -14
+##  3 01001            1    7817.      -13
+##  4 01001            1    8937.      -12
+##  5 01001            1    9427.      -11
+##  6 01001            1    9563.      -10
+##  7 01001            1    9327.       -9
+##  8 01001            1    9577.       -8
+##  9 01001            1    9712.       -7
+## 10 01001            1    9647.       -6
+## # ℹ 12 more rows</code></pre>
+<pre class="r"><code>lm_test &lt;-  lm(rawvalue ~ year, data = cnyt_test)
+
+lm_test %&gt;% 
+  broom::tidy() </code></pre>
+<pre><code>## # A tibble: 2 × 5
+##   term        estimate std.error statistic  p.value
+##   &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;
+## 1 (Intercept)   8726.      159.      55.0  2.61e-23
+## 2 year           -24.3      20.4     -1.19 2.47e- 1</code></pre>
+<p>We want to save <code>estimate</code> and <code>p.value</code> from the regression. Let us wrap the above code into a function.</p>
+<pre class="r"><code>get_county_reg &lt;- function(df_cnty){
+  
+  cnty_reg &lt;-  lm(rawvalue ~ year, data = df_cnty)
+  
+  return(
+    cnty_reg %&gt;% 
+      broom::tidy() %&gt;% 
+      select(term, estimate, p_value=p.value)
+  )
+} </code></pre>
+<p>Let us now test this function.</p>
+<pre class="r"><code>get_county_reg(df_cnty = cnyt_test)</code></pre>
+<pre><code>## # A tibble: 2 × 3
+##   term        estimate  p_value
+##   &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;
+## 1 (Intercept)   8726.  2.61e-23
+## 2 year           -24.3 2.47e- 1</code></pre>
+<p>It looks good.</p>
+</div>
+<div id="lm-for-one-county-for-all-15-measures" class="section level2">
+<h2>lm() for one county for all 15 measures</h2>
+<p>The function <code>get_county_reg</code> returns a dataframe. We can use the idea of <code>list-column data structure</code> in Chapter 25 in the 1st ediction of the book <a href="https://r4ds.had.co.nz/many-models.html">R for Data Science</a> and save the model results as dataframes in a dataframe.</p>
+<p>And we want to have regression results of 15 measures for a county.</p>
+<pre class="r"><code>cnty_test_15m &lt;- trend_data_clean %&gt;% 
+  filter(fipscode == &quot;01001&quot;) %&gt;% 
+  group_by(fipscode, measureid) %&gt;% 
+  nest() %&gt;%  
+  mutate(model_res = map(data, get_county_reg)) %&gt;% 
+  ungroup()
+
+cnty_test_15m</code></pre>
+<pre><code>## # A tibble: 15 × 4
+##    fipscode measureid data              model_res       
+##    &lt;chr&gt;        &lt;dbl&gt; &lt;list&gt;            &lt;list&gt;          
+##  1 01001            1 &lt;tibble [22 × 2]&gt; &lt;tibble [2 × 3]&gt;
+##  2 01001            3 &lt;tibble [13 × 2]&gt; &lt;tibble [2 × 3]&gt;
+##  3 01001            4 &lt;tibble [11 × 2]&gt; &lt;tibble [2 × 3]&gt;
+##  4 01001            5 &lt;tibble [9 × 2]&gt;  &lt;tibble [2 × 3]&gt;
+##  5 01001           23 &lt;tibble [20 × 2]&gt; &lt;tibble [2 × 3]&gt;
+##  6 01001           24 &lt;tibble [20 × 2]&gt; &lt;tibble [2 × 3]&gt;
+##  7 01001           45 &lt;tibble [14 × 2]&gt; &lt;tibble [2 × 3]&gt;
+##  8 01001           50 &lt;tibble [9 × 2]&gt;  &lt;tibble [2 × 3]&gt;
+##  9 01001           85 &lt;tibble [13 × 2]&gt; &lt;tibble [2 × 3]&gt;
+## 10 01001           88 &lt;tibble [12 × 2]&gt; &lt;tibble [2 × 3]&gt;
+## 11 01001          122 &lt;tibble [13 × 2]&gt; &lt;tibble [2 × 3]&gt;
+## 12 01001          125 &lt;tibble [18 × 2]&gt; &lt;tibble [2 × 3]&gt;
+## 13 01001          134 &lt;tibble [13 × 2]&gt; &lt;tibble [2 × 3]&gt;
+## 14 01001          155 &lt;tibble [9 × 2]&gt;  &lt;tibble [2 × 3]&gt;
+## 15 01001          169 &lt;tibble [12 × 2]&gt; &lt;tibble [2 × 3]&gt;</code></pre>
+<p>Let us check the results in column ‘model_res’.</p>
+<pre class="r"><code>cnty_test_15m$model_res[[1]]</code></pre>
+<pre><code>## # A tibble: 2 × 3
+##   term        estimate  p_value
+##   &lt;chr&gt;          &lt;dbl&gt;    &lt;dbl&gt;
+## 1 (Intercept)   8726.  2.61e-23
+## 2 year           -24.3 2.47e- 1</code></pre>
+<p>Yes, the results are there. Let us wrap this part as a function.To be more efficient, we can remove the column data after regression is done. We will do that in the function below.</p>
+<pre class="r"><code>get_cnty_reg_15_m &lt;- function(df_trend, cnty_fipscode){
+  
+  cnty_reg_15m &lt;- df_trend %&gt;% 
+    filter(fipscode == cnty_fipscode) %&gt;% 
+    group_by(fipscode, measureid) %&gt;% 
+    nest() %&gt;% 
+    mutate(model_res = map(data, get_county_reg)) %&gt;% 
+    ungroup() %&gt;% 
+    select(-data)
+  
+  return(cnty_reg_15m)
+  
+}</code></pre>
+<p>Test function:</p>
+<pre class="r"><code>get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = &quot;01001&quot;)</code></pre>
+<pre><code>## # A tibble: 15 × 3
+##    fipscode measureid model_res       
+##    &lt;chr&gt;        &lt;dbl&gt; &lt;list&gt;          
+##  1 01001            1 &lt;tibble [2 × 3]&gt;
+##  2 01001            3 &lt;tibble [2 × 3]&gt;
+##  3 01001            4 &lt;tibble [2 × 3]&gt;
+##  4 01001            5 &lt;tibble [2 × 3]&gt;
+##  5 01001           23 &lt;tibble [2 × 3]&gt;
+##  6 01001           24 &lt;tibble [2 × 3]&gt;
+##  7 01001           45 &lt;tibble [2 × 3]&gt;
+##  8 01001           50 &lt;tibble [2 × 3]&gt;
+##  9 01001           85 &lt;tibble [2 × 3]&gt;
+## 10 01001           88 &lt;tibble [2 × 3]&gt;
+## 11 01001          122 &lt;tibble [2 × 3]&gt;
+## 12 01001          125 &lt;tibble [2 × 3]&gt;
+## 13 01001          134 &lt;tibble [2 × 3]&gt;
+## 14 01001          155 &lt;tibble [2 × 3]&gt;
+## 15 01001          169 &lt;tibble [2 × 3]&gt;</code></pre>
+<p>It worked. Let us now do lm() for all counties and all measures, exploring both sequential and parallel ways.</p>
+</div>
+<div id="for-loop" class="section level2">
+<h2>for loop</h2>
+<p>We will first use a for loop and time the process. It took about 4 minutes.</p>
+<pre class="r"><code>tictoc::tic()
+
+n &lt;- length(cnty_list)
+
+# create an empty list to save results
+lst_trend_res &lt;- vector(&quot;list&quot;, length = n)
+
+for (i in 1:n) {
+  # print(paste0(&quot;i=&quot;, i, &quot;  &quot;, cnty_list[i]) )
+  
+   # call function to do regression
+  dat &lt;- get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = cnty_list[i])
+  
+  # save data to list 
+  lst_trend_res[[i]] &lt;- dat
+}</code></pre>
+<pre><code>## Warning: There was 1 warning in `mutate()`.
+## ℹ In argument: `model_res = map(data, get_county_reg)`.
+## ℹ In group 11: `fipscode = &quot;25021&quot;` and `measureid = 122`.
+## Caused by warning in `summary.lm()`:
+## ! essentially perfect fit: summary may be unreliable</code></pre>
+<pre class="r"><code># bind rows for each dataset
+all_trend_res_1 &lt;- bind_rows(lst_trend_res ) %&gt;% 
+  unnest(model_res)
+
+tictoc::toc()</code></pre>
+<pre><code>## 256.27 sec elapsed</code></pre>
+<pre class="r"><code>all_trend_res_1 %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 × 5
+##   fipscode measureid term          estimate  p_value
+##   &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;            &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01001            1 (Intercept) 8726.      2.61e-23
+## 2 01001            1 year         -24.3     2.47e- 1
+## 3 01001            3 (Intercept)    0.151   3.52e-12
+## 4 01001            3 year          -0.00560 7.99e- 4
+## 5 01001            4 (Intercept) 2565.      2.17e-11
+## 6 01001            4 year         -66.5     4.07e- 3</code></pre>
+</div>
+<div id="map" class="section level2">
+<h2>map</h2>
+<p>Now, we will try <code>purrr::map()</code>. A little faster than for loop. And the code is cleaner.</p>
+<pre class="r"><code>tictoc::tic()
+
+all_trend_res_2 &lt;- cnty_list %&gt;% 
+  map( ~get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = .)) %&gt;% 
+  list_rbind() %&gt;% 
+  unnest(model_res)</code></pre>
+<pre><code>## Warning: There was 1 warning in `mutate()`.
+## ℹ In argument: `model_res = map(data, get_county_reg)`.
+## ℹ In group 11: `fipscode = &quot;25021&quot;` and `measureid = 122`.
+## Caused by warning in `summary.lm()`:
+## ! essentially perfect fit: summary may be unreliable</code></pre>
+<pre class="r"><code>tictoc::toc() </code></pre>
+<pre><code>## 193.77 sec elapsed</code></pre>
+</div>
+<div id="foreach" class="section level2">
+<h2>foreach</h2>
+<p>Now let see if we can save time by parallazing the process with <code>foreach</code>. Yes, we can: the time dropped to ~ 1 minute.</p>
+<pre class="r"><code>tictoc::tic()
+
+n &lt;- length(cnty_list)
+
+all_trend_res_3 &lt;-  
+  foreach (i= 1:n, 
+         .combine=rbind,
+         .packages=&#39;tidyverse&#39;) %dopar% {
+   # call function to do regression
+  get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = cnty_list[i])
+
+}
+
+all_trend_res_3 &lt;- all_trend_res_3 %&gt;%
+  unnest(model_res)
+
+tictoc::toc()</code></pre>
+<pre><code>## 66.73 sec elapsed</code></pre>
+<pre class="r"><code>all_trend_res_3 %&gt;% 
+  head()</code></pre>
+<pre><code>## # A tibble: 6 × 5
+##   fipscode measureid term          estimate  p_value
+##   &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;            &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01001            1 (Intercept) 8726.      2.61e-23
+## 2 01001            1 year         -24.3     2.47e- 1
+## 3 01001            3 (Intercept)    0.151   3.52e-12
+## 4 01001            3 year          -0.00560 7.99e- 4
+## 5 01001            4 (Intercept) 2565.      2.17e-11
+## 6 01001            4 year         -66.5     4.07e- 3</code></pre>
+</div>
+<div id="future_map" class="section level2">
+<h2>future_map</h2>
+<p>Finally, let us try <code>future_map</code>. Less than 1 minute, even faster than as <code>foreach</code>. Again, the code is cleaner.</p>
+<pre class="r"><code>tictoc::tic()
+
+all_trend_res_4 &lt;- cnty_list %&gt;% 
+  future_map( ~get_cnty_reg_15_m(df_trend = trend_data_clean, cnty_fipscode = .)) %&gt;% 
+  list_rbind() %&gt;% 
+  unnest(model_res)</code></pre>
+<pre><code>## Warning: There was 1 warning in `mutate()`.
+## ℹ In argument: `model_res = map(data, get_county_reg)`.
+## ℹ In group 11: `fipscode = &quot;25021&quot;` and `measureid = 122`.
+## Caused by warning in `summary.lm()`:
+## ! essentially perfect fit: summary may be unreliable</code></pre>
+<pre class="r"><code>tictoc::toc()</code></pre>
+<pre><code>## 57.08 sec elapsed</code></pre>
+<pre class="r"><code>all_trend_res_4 %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 × 5
+##   fipscode measureid term          estimate  p_value
+##   &lt;chr&gt;        &lt;dbl&gt; &lt;chr&gt;            &lt;dbl&gt;    &lt;dbl&gt;
+## 1 01001            1 (Intercept) 8726.      2.61e-23
+## 2 01001            1 year         -24.3     2.47e- 1
+## 3 01001            3 (Intercept)    0.151   3.52e-12
+## 4 01001            3 year          -0.00560 7.99e- 4
+## 5 01001            4 (Intercept) 2565.      2.17e-11
+## 6 01001            4 year         -66.5     4.07e- 3</code></pre>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>Parallel computing offers a powerful means of accelerating R code, enabling faster and more efficient data analysis. The <code>foreach</code> and <code>furrr</code> packages provide convenient interfaces for parallelizing operations, whether iterating over elements in a collection or within a pipeline. By harnessing the power of parallel computing, we can tackle larger datasets and more complex analyses with efficiency, unlocking new possibilities for exploration and discovery in R.</p>
+</div>
