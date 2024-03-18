@@ -1,0 +1,594 @@
+---
+title: Reading Fixed-Width Files in SAS, R, and Python
+author: GL
+date: '2024-03-18'
+slug: reading-fixed-width-files-in-sas-r-and-python
+categories:
+  - R
+  - SAS
+  - Python
+tags:
+  - R
+  - Python
+  - SAS
+output:
+  blogdown::html_page:
+    toc: true    
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#about-fixed-width-files" id="toc-about-fixed-width-files">About Fixed-Width Files</a></li>
+<li><a href="#the-dataset-vital-statistics-online-data-portal" id="toc-the-dataset-vital-statistics-online-data-portal">The Dataset: Vital Statistics Online Data Portal</a></li>
+<li><a href="#sas" id="toc-sas">SAS</a></li>
+<li><a href="#r" id="toc-r">R</a></li>
+<li><a href="#python" id="toc-python">Python</a></li>
+<li><a href="#conclusion" id="toc-conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>A fixed-width data file is a type of structured data format where each column within the file has a specific, predetermined width. In contrast to delimited files like CSV (comma-separated values), where columns are separated by a delimiter character such as a comma or tab, fixed-width files organize data by allocating a fixed number of characters for each column. In this post, we’ll explore how to read fixed-width files using SAS, R, and Python.</p>
+</div>
+<div id="about-fixed-width-files" class="section level1">
+<h1>About Fixed-Width Files</h1>
+<p>Fixed-width files, characterized by the allocation of specific widths for each column, offer several advantages and limitations:</p>
+<ul>
+<li>Store Specific Information in Fixed Columns:</li>
+</ul>
+<p>In fixed-width files, data is organized with precision, with each column allocated a predetermined width. This structured approach ensures that specific types of information are consistently stored in their designated columns. For example, in a dataset containing personal information, the first 10 characters might be reserved for the first name, the next 15 for the last name, and so forth.</p>
+<ul>
+<li>Speed and Low Resource Consumption:</li>
+</ul>
+<p>Due to their simple structure, fixed-width files are typically processed more quickly and with lower resource consumption compared to more complex file formats. This efficiency is especially advantageous when working with large datasets or in environments with limited computational resources.</p>
+<ul>
+<li>Raw Data Without Additional Formatting:</li>
+</ul>
+<p>Fixed-width files contain nothing but raw data, devoid of any additional formatting or metadata commonly found in other file formats. This raw nature simplifies the storage and exchange of data but requires careful handling during processing to extract meaningful insights.</p>
+<ul>
+<li>Lack of Variable/Column/Field Names, Labels, or Tags:</li>
+</ul>
+<p>Unlike other data formats such as CSV or Excel, fixed-width files do not inherently include variable names, column labels, or any form of tagging to identify the data within each column. As a result, navigating and interpreting the data can be challenging without prior knowledge of the file’s structure. It is thus crucial to understand the variables and columns from the file documentation when working on a fixed-width data file.</p>
+</div>
+<div id="the-dataset-vital-statistics-online-data-portal" class="section level1">
+<h1>The Dataset: Vital Statistics Online Data Portal</h1>
+<p>To illustrate the process of reading fixed-width files, let’s use a dataset from the <a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm">‘Vital Statistics Online Data Portal’</a>. This dataset contains vital statistics information, such as birth and death records, organized in a fixed-width format. Our task is to extract meaningful insights from this data using SAS, R, and Python. We will use <a href="https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2022ps.zip">2022 U.S. Territories Birth Data</a>, which is a text file about 30 MB after unzipping. If we open the txt file in an text editor, we will see things as following:</p>
+<p><img src="images/nat_2022_public_1.PNG" width="80%" /></p>
+<p>There are columns of numbers and letters, but no column headers. We need the <a href="https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/natality/UserGuide2022.pdf">documentation</a> before we can properly read and use the data. If we go to page 9 of the documentation (a screenshot shown below), we see ‘202201’ actually are for two columns: Birth Year and Birth Month.</p>
+<p><img src="images/nat_doc.PNG" width="80%" /></p>
+<p>The documentation is the ‘map’ that we use to identify each column in the data file. Assume we want to extract the following information from the data: Birth Year, Birth Month, Mother’s Single Years of Age, Mother’s Race Recode 31, Mother’s Hispanic Origin Recode. Then we need to find their positions in the documentation. Let us list them in a table:</p>
+<div id="ophmqeaxgd" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#ophmqeaxgd table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#ophmqeaxgd thead, #ophmqeaxgd tbody, #ophmqeaxgd tfoot, #ophmqeaxgd tr, #ophmqeaxgd td, #ophmqeaxgd th {
+  border-style: none;
+}
+
+#ophmqeaxgd p {
+  margin: 0;
+  padding: 0;
+}
+
+#ophmqeaxgd .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#ophmqeaxgd .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#ophmqeaxgd .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#ophmqeaxgd .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#ophmqeaxgd .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#ophmqeaxgd .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#ophmqeaxgd .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#ophmqeaxgd .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#ophmqeaxgd .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#ophmqeaxgd .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#ophmqeaxgd .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#ophmqeaxgd .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#ophmqeaxgd .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#ophmqeaxgd .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#ophmqeaxgd .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ophmqeaxgd .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#ophmqeaxgd .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#ophmqeaxgd .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#ophmqeaxgd .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ophmqeaxgd .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#ophmqeaxgd .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ophmqeaxgd .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#ophmqeaxgd .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ophmqeaxgd .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#ophmqeaxgd .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#ophmqeaxgd .gt_left {
+  text-align: left;
+}
+
+#ophmqeaxgd .gt_center {
+  text-align: center;
+}
+
+#ophmqeaxgd .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#ophmqeaxgd .gt_font_normal {
+  font-weight: normal;
+}
+
+#ophmqeaxgd .gt_font_bold {
+  font-weight: bold;
+}
+
+#ophmqeaxgd .gt_font_italic {
+  font-style: italic;
+}
+
+#ophmqeaxgd .gt_super {
+  font-size: 65%;
+}
+
+#ophmqeaxgd .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#ophmqeaxgd .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#ophmqeaxgd .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#ophmqeaxgd .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#ophmqeaxgd .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#ophmqeaxgd .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#ophmqeaxgd .gt_indent_5 {
+  text-indent: 25px;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="variable">variable</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="position">position</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="width">width</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="variable" class="gt_row gt_left">Birth Year</td>
+<td headers="position" class="gt_row gt_right">9-12</td>
+<td headers="width" class="gt_row gt_right">4</td></tr>
+    <tr><td headers="variable" class="gt_row gt_left">Birth Month</td>
+<td headers="position" class="gt_row gt_right">13-14</td>
+<td headers="width" class="gt_row gt_right">2</td></tr>
+    <tr><td headers="variable" class="gt_row gt_left">Mother’s Single Years of Age</td>
+<td headers="position" class="gt_row gt_right">75-76</td>
+<td headers="width" class="gt_row gt_right">2</td></tr>
+    <tr><td headers="variable" class="gt_row gt_left">Mother’s Race Recode 31</td>
+<td headers="position" class="gt_row gt_right">105-106</td>
+<td headers="width" class="gt_row gt_right">2</td></tr>
+    <tr><td headers="variable" class="gt_row gt_left">Mother’s Hispanic Origin Recode</td>
+<td headers="position" class="gt_row gt_right">115</td>
+<td headers="width" class="gt_row gt_right">1</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
+</div>
+<div id="sas" class="section level1">
+<h1>SAS</h1>
+<p>We can use a data step to read in a fixed-width file. One important thing is to specify the positions of columns to read. We can the following code to read the sample data, assuming we put the txt file at ‘C:’.</p>
+<pre><code>data Nat2022; infile &#39;C:\Nat2022PublicPS.c20230516.r20231002.txt&#39;;
+input 
+   @9  birth_year $4.
+   @13  birth_month $2.
+   @75  m_age 2.
+   @105 m_race_recode_31 $2.
+   @115 m_hispanic_origin_recode $1.
+   ; 
+run;</code></pre>
+<p>Here is a screenshot of the first 10 rows in the dataset ‘Nat2022’:</p>
+<p><img src="images/nat_sas.PNG" width="80%" /></p>
+</div>
+<div id="r" class="section level1">
+<h1>R</h1>
+<p>Now let us read in the fixed-width file using <code>read_fwf()</code> function from the <a href="https://readr.tidyverse.org/reference/read_fwf.html"><code>readr</code> package</a>. We will use the start and end positions for each column.</p>
+<pre class="r"><code>Nat2022_r &lt;- read_fwf(file = &quot;Nat2022PublicPS.c20230516.r20231002.txt&quot;, 
+                    col_positions =  fwf_positions(
+                      start = c(9, 13, 75, 105, 115),
+                      end = c(12, 14, 76, 106, 115),
+                      col_names = c(&quot;birth_year&quot;, &quot;birth_month&quot;, &quot;m_age&quot;, &quot;m_race_recode_31&quot;, &quot;m_hispanic_origin_recode&quot;)),
+                    show_col_types = FALSE)
+
+Nat2022_r %&gt;% head(10)</code></pre>
+<pre><code>## # A tibble: 10 × 5
+##    birth_year birth_month m_age m_race_recode_31 m_hispanic_origin_recode
+##         &lt;dbl&gt; &lt;chr&gt;       &lt;dbl&gt; &lt;chr&gt;                               &lt;dbl&gt;
+##  1       2022 01             33 10                                      5
+##  2       2022 01             28 04                                      0
+##  3       2022 01             24 01                                      0
+##  4       2022 01             30 05                                      0
+##  5       2022 01             28 04                                      0
+##  6       2022 01             32 05                                      0
+##  7       2022 01             28 05                                      0
+##  8       2022 01             33 04                                      0
+##  9       2022 01             38 04                                      0
+## 10       2022 01             29 05                                      0</code></pre>
+</div>
+<div id="python" class="section level1">
+<h1>Python</h1>
+<p>We can read fixed-width files in Python using the <code>read_fwf</code> function in <a href="https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_fwf.html">Pandas</a>. Again, we need to specify the widths of each column in the file, just like we did in SAS or R.One thing to note that the index in Python starts from 0, not 1, and we need to adjust the positions by 1. Also, we can directly read the data using the URL, without downloading the file.</p>
+<pre><code>import pandas as pd
+
+colspecs = [(9-1, 12), (13-1, 14), (75-1, 76), (105-1, 106), (115-1, 115)]  # define column widths
+cols_names = [&quot;birth_year&quot;, &quot;birth_month&quot;, &quot;m_age&quot;, &quot;m_race_recode_31&quot;, &quot;m_hispanic_origin_recode&quot;]
+
+nat2022_py = pd.read_fwf(&#39;https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Datasets/DVS/natality/Nat2022ps.zip&#39;, 
+            encoding = &#39;utf_8&#39;, 
+            index_col = False,
+            compression=&#39;zip&#39;,
+            colspecs=colspecs, 
+            names= cols_names)
+
+nat2022_py.head(10)</code></pre>
+<p><img src="images/nat_py.PNG" width="80%" /></p>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>In this post, we’ve explored the reading fixed-width files in SAS, R, and Python using a dataset from the ‘Vital Statistics Online Data Portal’. The techniques outlined here can be helpful for processing fixed-width data efficiently. Whether you prefer SAS, R, or Python, one critical thing to handle fixed-width files is to know the file structure and identify the positions of columns in the data.</p>
+</div>
