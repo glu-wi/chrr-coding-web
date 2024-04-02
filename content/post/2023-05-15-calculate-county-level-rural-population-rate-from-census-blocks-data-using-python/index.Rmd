@@ -187,7 +187,7 @@ tibble::tribble(
 
 ```
 
-## Comapure the calcuated results with data released by Census
+## Compare the calcuated results with data released by Census
 
 We can compare the calculated results with the data released by Census: [County-level Urban and Rural information for the 2020 Census](https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html). The data is in an excel file, and we can download it using Pandas, which takes ~ 1 minute.
 
