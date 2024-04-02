@@ -25,7 +25,7 @@ output:
 <li><a href="#county-level-rural-rate-for-counties-in-50-states-dc" id="toc-county-level-rural-rate-for-counties-in-50-states-dc">County-level rural rate for counties in 50 states + DC</a>
 <ul>
 <li><a href="#import-data---2020-tabulation-census-block" id="toc-import-data---2020-tabulation-census-block">import data - ‘2020 Tabulation (Census) Block’</a></li>
-<li><a href="#comapure-the-calcuated-results-with-data-released-by-census" id="toc-comapure-the-calcuated-results-with-data-released-by-census">Comapure the calcuated results with data released by Census</a></li>
+<li><a href="#compare-the-calcuated-results-with-data-released-by-census" id="toc-compare-the-calcuated-results-with-data-released-by-census">Compare the calcuated results with data released by Census</a></li>
 </ul></li>
 <li><a href="#conclusion" id="toc-conclusion">Conclusion</a></li>
 </ul>
@@ -135,8 +135,8 @@ us_ct_rural_rate[&#39;rate&#39;] = us_ct_rural_rate[&#39;pop_r&#39;]/us_ct_rural
 ## 4         1          7  22293 22293 NaN    1    
 ## 5         1          9  59134 53510 5624   0.905</code></pre>
 </div>
-<div id="comapure-the-calcuated-results-with-data-released-by-census" class="section level2">
-<h2>Comapure the calcuated results with data released by Census</h2>
+<div id="compare-the-calcuated-results-with-data-released-by-census" class="section level2">
+<h2>Compare the calcuated results with data released by Census</h2>
 <p>We can compare the calculated results with the data released by Census: <a href="https://www.census.gov/programs-surveys/geography/guidance/geo-areas/urban-rural.html">County-level Urban and Rural information for the 2020 Census</a>. The data is in an excel file, and we can download it using Pandas, which takes ~ 1 minute.</p>
 <pre><code>census_ct_ur_2020 = pd.read_excel(&#39;https://www2.census.gov/geo/docs/reference/ua/2020_UA_COUNTY.xlsx&#39;)</code></pre>
 <p>Let’s select only columns we need and rename them.’_PUB’ is used to indicate public (or published) data from Census.</p>
