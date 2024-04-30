@@ -169,10 +169,11 @@ This time, we do get the tracts totally inside the county, but tracts around the
 
 ## Alternative: modified `st_within`
 
-This [stackoverflow post](https://stackoverflow.com/questions/62667218/keep-polygons-that-are-fully-or-partially-within-a-larger-one-without-a-negative) gave helpful information of how we can proceed. The key ideal is: use `st_within` to check if a point is within a polygon, instead of checking if a smaller polygon (i.e., a tract) is within a larger polygon (i.e., a county).
+This [stackoverflow post](https://stackoverflow.com/questions/62667218/keep-polygons-that-are-fully-or-partially-within-a-larger-one-without-a-negative) gave helpful information of how we can proceed. The key ideal is: use `st_within` to check if a point is within a polygon, instead of checking if a smaller polygon (i.e., a tract) is within a larger polygon (i.e., a county):
 
->One alternative is to turn each tract into a point and intersect on those, which removes the coincident borders that gave me trouble. 
->st_point_on_surface() is preferable to st_centroid() since it guarantees the point will lie on the surface of the polygon, whereas some polygons will have centroids lying outside its surface.
+-   "One alternative is to turn each tract into a point and intersect on those, which removes the coincident borders that gave me trouble."
+-   "st_point_on_surface() is preferable to st_centroid() since it guarantees the point will lie on the surface of the polygon, whereas some polygons will have centroids lying outside its surface."
+
 
 So, we will use a point to represent a tract and then apply `st_within`.
 
@@ -248,13 +249,6 @@ linked_tracts22_counties20 %>% head()
 
 We can compare our crosswalk with the crosswalk from [CT Data Collaborative](https://github.com/CT-Data-Collaborative/2022-tract-crosswalk). We'll read the csv file from "https://raw.githubusercontent.com/CT-Data-Collaborative/2022-tract-crosswalk/main/2022tractcrosswalk.csv".
 
-
-https://github.com/CT-Data-Collaborative/2022-tract-crosswalk
-
-tract_fips_20 and town_fips_20 include the FIPS code from its county (county_fips_20)
-
->Note that tracts that contained only water and were not within municipal boundaries are excluded from this crosswalk. These are 2020 tracts 09001990000, 09007990100, 09009990000, and 09011990100.
-
 ## Get data
 
 ```{r}
@@ -288,7 +282,7 @@ CT_tract22_county20_crosswalk %>%
 
 Overall, our data matched CT Data Collaborative data for 879 rows, in terms of tract FIPS codes, 2020 and 2022 county FIPS codes. Our data has 5 more tracts compared with CT Data Collaborative data. They excluded those 5 tracts according to following notes:
 
->Note that tracts that contained only water and were not within municipal boundaries are excluded from this crosswalk. These are 2020 tracts 09001990000, 09007990100, 09009990000, and 09011990100.
+>"Note that tracts that contained only water and were not within municipal boundaries are excluded from this crosswalk. These are 2020 tracts 09001990000, 09007990100, 09009990000, and 09011990100."
 
 # Summary
 
