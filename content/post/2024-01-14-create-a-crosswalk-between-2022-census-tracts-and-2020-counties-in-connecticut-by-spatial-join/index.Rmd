@@ -6,17 +6,15 @@ date: '2024-04-30'
 slug: create-a-crosswalk-between-2022-census-tracts-and-2020-counties-in-connecticut-by-spatial-join
 categories:
   - R
-  - Python
 tags:
   - R
-  - Python
 output:
   blogdown::html_page:
     toc: true    
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(tidycensus)
@@ -45,10 +43,12 @@ In this blog post, we’ll explore how to link the 2022 Census tracts with the 2
 
 We can use `tigris` package to get counties geometries of state Connecticut for year 2020 and 2022 and compare their differences.
 
-```{r}
-ct_2020 <- tigris::counties("Connecticut", cb = FALSE, year = 2020)
-ct_2022 <- tigris::counties("Connecticut", cb = FALSE, year = 2022)
+```{r message=FALSE}
+ct_2020 <- tigris::counties("Connecticut", cb = FALSE, progress_bar = FALSE,
+                            year = 2020)
 
+ct_2022 <- tigris::counties("Connecticut", cb = FALSE, progress_bar = FALSE,
+                            year = 2022)
 ```
 
 ## CT counties 2020
@@ -69,7 +69,6 @@ ggplot(data = ct_2020, aes(fill = NAME, text = NAME,  label = NAME)) +
 
 -   9 counties
 -   County FIPS codes: `r ct_2022 %>% st_drop_geometry() %>% distinct(COUNTYFP) %>% arrange(COUNTYFP) %>% pull()`
--   map
 
 ```{r}
 ggplot(data = ct_2022, aes(fill = NAME, text = NAME,  label = NAME)) + 
@@ -86,55 +85,37 @@ ggplot(data = ct_2022, aes(fill = NAME, text = NAME,  label = NAME)) +
 Let's use `tigris` to get 2020 and 2022 tract data of Connecticut.
 
 ```{r}
-ct_tracts_2020 <- tigris::tracts(state = "CT", cb = FALSE, year = 2020)
-ct_tracts_2022 <- tigris::tracts(state = "CT", cb = FALSE, year = 2022)
+ct_tracts_2020 <- tigris::tracts(state = "CT", cb = FALSE, progress_bar = FALSE,
+                                 year = 2020)
+ct_tracts_2022 <- tigris::tracts(state = "CT", cb = FALSE, progress_bar = FALSE,
+                                 year = 2022)
 ```
 
 ## 2020 county + 2020 tract
 
 ```{r}
-gg3 <- ggplot() + 
+ggplot() + 
   geom_sf(data = ct_tracts_2020, fill = NA) +
   geom_sf(data = ct_2020, fill = NA, color="red", linewidth = 1)+
   theme_void()
-gg3
 ```
 
 ## 2020 county + 2022 tract
 ```{r}
-gg3b <- ggplot() + 
+ggplot() + 
   geom_sf(data = ct_tracts_2022, fill = NA) +
   geom_sf(data = ct_2020, fill = NA, color="red", linewidth = 1)+
   theme_void()
-gg3b
 ```
 
 ## 2022 county + 2022 tract
 
 ```{r}
-gg4 <- ggplot() + 
+ggplot() + 
   geom_sf(data = ct_tracts_2022, fill = NA) +
   geom_sf(data = ct_2022, fill = NA, color="blue", linewidth = 1)+
   theme_void()
 
-gg4
-```
-
-## tracts 2020 vs 2022
-
-```{r}
-ct_tracts_2020 %>% 
-  sf::st_drop_geometry() %>% 
-  select(1:2, GEOID) %>% 
-  anti_join(ct_tracts_2022 %>% sf::st_drop_geometry() %>% 
-              select(1:2, GEOID),
-            by = "GEOID")
-
-ct_tracts_2022 %>% 
-  sf::st_drop_geometry() %>% 
-  select(1:2, GEOID) %>% 
-  anti_join(ct_tracts_2020 %>% sf::st_drop_geometry()%>% select(1:2, GEOID),
-            by = "GEOID")
 ```
 
 # 2020 county + 2022 tract
@@ -260,7 +241,7 @@ linked_tracts22_counties20 <- ct_2020 %>%
   map(~get_tracts_in_county(tracts = ct_tracts_2022, county = ct_2020, ct_fips = .x)) %>% 
   list_rbind()
 
-linked_tracts22_counties20
+linked_tracts22_counties20 %>% head()
 ```
 
 # Compare
@@ -288,7 +269,7 @@ CT_tract22_county20_crosswalk <- CT_tractcrosswalk2022 %>%
          tract_fips_2020 = str_pad(tract_fips_2020, 11, "left", "0"),
          county_fips_2020 = str_pad(county_fips_2020, 5, "left", "0"))
 
-CT_tract22_county20_crosswalk
+CT_tract22_county20_crosswalk %>% head()
 ```
 
 ## Compare with home-made dict
