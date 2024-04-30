@@ -1,0 +1,315 @@
+---
+title: Create a crosswalk between 2022 Census tracts and 2020 counties in Connecticut
+  by spatial join
+author: GL
+date: '2024-04-30'
+slug: create-a-crosswalk-between-2022-census-tracts-and-2020-counties-in-connecticut-by-spatial-join
+categories:
+  - R
+  - Python
+tags:
+  - R
+  - Python
+output:
+  blogdown::html_page:
+    toc: true    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(tidycensus)
+library(tigris)
+library(sf)
+library(ggpubr)
+library(ggiraph)
+library(kableExtra)
+
+print_kbl <- function(df, title="", f_width=FALSE){
+  df |> 
+    kbl(caption = title) |> 
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = f_width, position = "left")
+}
+```
+
+# Introduction
+
+The State of Connecticut (CT) has adopted nine planning regions as county-equivalent geographic units. These regions replaced the previous eight counties (i.e., legacy counties). The Census Bureau has implemented this change since 2022. As a result, public data and geospatial products from Census now reflect the new boundaries. By the year 2024, all Census Bureau operations and publications have used the nine new county-equivalent boundaries, names, and codes. On the other hand, the transition to county-equivalents in Connecticut does not affect block group and census tract boundaries, which makes it possible to link tracts to legacy counties by spatial analysis.
+
+There are situations where we may need to re-construct data for the legacy CT counties by aggregating data from Census tract-level data. For example, one may want to compare [ACS S2801](https://censusreporter.org/tables/B28001/) (Types of Computers and Internet Subscriptions) data between 2021 and 2022 at CT county-level. A crosswalk to link 2022 Census tracts and legacy counties in Connecticut is useful - one can aggregate new data at tract-level to obtain data at legacy county-level.
+
+In this blog post, we’ll explore how to link the 2022 Census tracts with the 2020 counties in Connecticut using spatial analysis. Specifically, we’ll achieve this through spatial join using the `sf` package in R. We can create the same crosswalk in Python, which we’ll explore in a future post.
+
+# CT counties
+
+We can use `tigris` package to get counties geometries of state Connecticut for year 2020 and 2022 and compare their differences.
+
+```{r}
+ct_2020 <- tigris::counties("Connecticut", cb = FALSE, year = 2020)
+ct_2022 <- tigris::counties("Connecticut", cb = FALSE, year = 2022)
+
+```
+
+## CT counties 2020
+
+-   8 counties
+-   County FIPS codes: `r ct_2020 %>% st_drop_geometry() %>% distinct(COUNTYFP) %>% arrange(COUNTYFP) %>% pull()`
+```{r}
+ggplot(data = ct_2020, aes(fill = NAME, text = NAME,  label = NAME)) + 
+  geom_sf(color="black",
+          size=0.25, show.legend = FALSE, alpha = 0.1) + 
+  geom_sf_label(fill = NA,  # override the fill from aes()
+                fun.geometry = sf::st_centroid) +
+  theme_void()
+
+```
+
+## CT counties 2022
+
+-   9 counties
+-   County FIPS codes: `r ct_2022 %>% st_drop_geometry() %>% distinct(COUNTYFP) %>% arrange(COUNTYFP) %>% pull()`
+-   map
+
+```{r}
+ggplot(data = ct_2022, aes(fill = NAME, text = NAME,  label = NAME)) + 
+  geom_sf(color="black",
+          size=0.25, show.legend = FALSE, alpha=0.2) + 
+  geom_sf_label(fill = "white",  # override the fill from aes()
+                fun.geometry = sf::st_centroid) +
+  theme_void()
+
+```
+
+# CT tracts
+
+Let's use `tigris` to get 2020 and 2022 tract data of Connecticut.
+
+```{r}
+ct_tracts_2020 <- tigris::tracts(state = "CT", cb = FALSE, year = 2020)
+ct_tracts_2022 <- tigris::tracts(state = "CT", cb = FALSE, year = 2022)
+```
+
+## 2020 county + 2020 tract
+
+```{r}
+gg3 <- ggplot() + 
+  geom_sf(data = ct_tracts_2020, fill = NA) +
+  geom_sf(data = ct_2020, fill = NA, color="red", linewidth = 1)+
+  theme_void()
+gg3
+```
+
+## 2020 county + 2022 tract
+```{r}
+gg3b <- ggplot() + 
+  geom_sf(data = ct_tracts_2022, fill = NA) +
+  geom_sf(data = ct_2020, fill = NA, color="red", linewidth = 1)+
+  theme_void()
+gg3b
+```
+
+## 2022 county + 2022 tract
+
+```{r}
+gg4 <- ggplot() + 
+  geom_sf(data = ct_tracts_2022, fill = NA) +
+  geom_sf(data = ct_2022, fill = NA, color="blue", linewidth = 1)+
+  theme_void()
+
+gg4
+```
+
+## tracts 2020 vs 2022
+
+```{r}
+ct_tracts_2020 %>% 
+  sf::st_drop_geometry() %>% 
+  select(1:2, GEOID) %>% 
+  anti_join(ct_tracts_2022 %>% sf::st_drop_geometry() %>% 
+              select(1:2, GEOID),
+            by = "GEOID")
+
+ct_tracts_2022 %>% 
+  sf::st_drop_geometry() %>% 
+  select(1:2, GEOID) %>% 
+  anti_join(ct_tracts_2020 %>% sf::st_drop_geometry()%>% select(1:2, GEOID),
+            by = "GEOID")
+```
+
+# 2020 county + 2022 tract
+
+We can try a few approaches to finding 2022 tracts within the boundary of a legacy CT county.Let's first try 'st_intersects' and see if we can get tract polygons within a county. We'll use legacy county `003` as an example 
+
+## `st_intersects`: not working
+
+```{r warning=FALSE, message=FALSE}
+ct_sel <- "003"
+
+tracts_sel <- ct_tracts_2022 %>% 
+  st_join(ct_2020 %>%  filter(COUNTYFP == ct_sel),
+          join = st_intersects,
+          left = FALSE,
+          suffix = c("_2022", "_2020"))
+  
+p <- ggplot() + 
+  geom_sf_interactive(data = tracts_sel, fill = NA, aes(tooltip = NAMELSAD_2022, data_id = TRACTCE) ) + 
+  geom_sf_interactive(data = ct_2020 %>%  filter(COUNTYFP == ct_sel), fill = NA, color="red", linewidth = 1)+
+  theme_void()
+
+ggiraph::girafe(ggobj = p
+                , width_svg = 8, height_svg = 5
+                ) %>% 
+  girafe_options(opts_hover(css = "fill:cyan;"),
+                 opts_zoom(min = .8, max = 5))
+```
+
+The boundary of county '003' is the read curve. As we can see, `st_intersects` gives us not only tracts inside county '003', but also those tracts that touches county boundary outside. Maybe we should try `st_within`.
+
+## `st_within`
+
+```{r warning=FALSE, message=FALSE}
+ct_sel <- "003"
+
+tracts_sel <- ct_tracts_2022 %>% 
+  st_join(ct_2020 %>%  filter(COUNTYFP == ct_sel),
+          join = st_within,
+          left = FALSE,
+          suffix = c("_2022", "_2020"))
+  
+ggplot() + 
+  geom_sf(data = tracts_sel, fill = NA ) + 
+  geom_sf(data = ct_2020 %>%  filter(COUNTYFP == ct_sel), fill = NA, color="red", linewidth = 1)+
+  theme_void()
+
+```
+
+This time, we do get the tracts totally inside the county, but tracts around the county boundary are not included. `st_within` returns only if a geometry is entirely inside a polygon. Those border tracts may not exactly match the county boundary, since we are dealing with 2022 tracts polygons and 2020 county polygons.
+
+## Alternative: modified `st_within`
+
+This [stackoverflow post](https://stackoverflow.com/questions/62667218/keep-polygons-that-are-fully-or-partially-within-a-larger-one-without-a-negative) gave helpful information of how we can proceed. The key ideal is: use `st_within` to check if a point is within a polygon, instead of checking if a smaller polygon (i.e., a tract) is within a larger polygon (i.e., a county).
+
+>One alternative is to turn each tract into a point and intersect on those, which removes the coincident borders that gave me trouble. 
+>st_point_on_surface() is preferable to st_centroid() since it guarantees the point will lie on the surface of the polygon, whereas some polygons will have centroids lying outside its surface.
+
+So, we will use a point to represent a tract and then apply `st_within`.
+
+```{r warning=FALSE, message=FALSE}
+ct_sel <- "003"
+
+# get centroids of tracts; find tract points within a county by 'st_within'
+points <- ct_tracts_2022 %>% 
+  mutate(geo_tract = geometry) %>% 
+  mutate(geometry = st_point_on_surface(geometry)) %>% 
+  st_join(ct_2020 %>%  filter(COUNTYFP == ct_sel),
+          join = st_within,
+          left = FALSE,
+          suffix = c("_2022", "_2020")) 
+
+# 
+tracts_within <- ct_tracts_2022 %>% 
+  mutate(geo_tract = geometry) %>% 
+  mutate(geometry = st_point_on_surface(geometry)) %>% 
+  st_join(ct_2020 %>%  filter(COUNTYFP == ct_sel),
+          join = st_within,
+          left = FALSE,
+          suffix = c("_2022", "_2020")) %>% 
+  mutate(geometry = geo_tract ) 
+
+tracts_within %>% 
+  ggplot() +
+  geom_sf(fill = NA) + # tracts
+  geom_sf(data = points, size = 1, color = 'blue') + # points
+  geom_sf(data = ct_2020 %>%  filter(COUNTYFP == ct_sel), fill = NA, color="red", linewidth = 1)+ # county
+  theme_void()
+```
+
+Great! It worked. Now we can work on linking 2022 tracts to 2020 counties.
+
+# Link 2022 tracts to 2020 counties
+
+## Function
+
+Let's write a function to find 2022 tracts in a 2020 county. We'll call it `get_tracts_in_county`.
+
+```{r}
+get_tracts_in_county <- function(tracts, county, ct_fips){
+  tracts_in_cnty <- tracts %>% 
+    mutate(geometry = st_point_on_surface(geometry)) %>% 
+    st_join(county %>%  filter(COUNTYFP == ct_fips),
+            join = st_within,
+            left = FALSE,
+            suffix = c("_2022", "_2020"))  %>% 
+    select(statecode = STATEFP_2022, countycode_2022 = COUNTYFP_2022, tract_fips_2022 = GEOID_2022, countycode_2020 = COUNTYFP_2020) %>% 
+    st_drop_geometry()
+  
+  return(tracts_in_cnty)
+}
+
+```
+
+## Crosswalk
+
+We can now use the function to create the crosswalk between 2022 tracts and 2020 counties.
+
+```{r warning=FALSE, message=FALSE}
+linked_tracts22_counties20 <- ct_2020 %>% 
+  pull(COUNTYFP) %>% 
+  str_sort() %>% 
+  map(~get_tracts_in_county(tracts = ct_tracts_2022, county = ct_2020, ct_fips = .x)) %>% 
+  list_rbind()
+
+linked_tracts22_counties20
+```
+
+# Compare
+
+We can compare our crosswalk with the crosswalk from [CT Data Collaborative](https://github.com/CT-Data-Collaborative/2022-tract-crosswalk). We'll read the csv file from "https://raw.githubusercontent.com/CT-Data-Collaborative/2022-tract-crosswalk/main/2022tractcrosswalk.csv".
+
+
+https://github.com/CT-Data-Collaborative/2022-tract-crosswalk
+
+tract_fips_20 and town_fips_20 include the FIPS code from its county (county_fips_20)
+
+>Note that tracts that contained only water and were not within municipal boundaries are excluded from this crosswalk. These are 2020 tracts 09001990000, 09007990100, 09009990000, and 09011990100.
+
+## Get data
+
+```{r}
+CT_tractcrosswalk2022 <- read_csv("https://raw.githubusercontent.com/CT-Data-Collaborative/2022-tract-crosswalk/main/2022tractcrosswalk.csv") %>% 
+  glimpse()
+
+CT_tract22_county20_crosswalk <- CT_tractcrosswalk2022 %>% 
+  janitor::clean_names() %>% 
+  select(tract_fips_2020, tract_fips_2022, county_fips_2020) %>% 
+  filter(tract_fips_2020 != tract_fips_2022) %>% 
+  mutate(tract_fips_2022 = str_pad(tract_fips_2022, 11, "left", "0"),
+         tract_fips_2020 = str_pad(tract_fips_2020, 11, "left", "0"),
+         county_fips_2020 = str_pad(county_fips_2020, 5, "left", "0"))
+
+CT_tract22_county20_crosswalk
+```
+
+## Compare with home-made dict
+
+We can use `anti_join` to see the differences. 
+
+```{r}
+linked_tracts22_counties20 %>% 
+  anti_join(CT_tract22_county20_crosswalk,
+            by = 'tract_fips_2022')
+
+CT_tract22_county20_crosswalk %>% 
+  anti_join(linked_tracts22_counties20,
+            by = 'tract_fips_2022')
+```
+
+Overall, our data matched CT Data Collaborative data for 879 rows, in terms of tract FIPS codes, 2020 and 2022 county FIPS codes. Our data has 5 more tracts compared with CT Data Collaborative data. They excluded those 5 tracts according to following notes:
+
+>Note that tracts that contained only water and were not within municipal boundaries are excluded from this crosswalk. These are 2020 tracts 09001990000, 09007990100, 09009990000, and 09011990100.
+
+# Summary
+
+In this post, We explored how to create a crosswalk to link CT tracts to CT legacy counties using R's spatial analysis capability. In a future post, we will see how to achieve the same results using Python.
+
