@@ -59,7 +59,7 @@ SAS requires two configuration options in order to communicate with R.
 
 ## 'cfg' file
 
-First, the `RLANG` option must be set when SAS is started. This can be done by adding the following two lines in the SAS configuration file `sasv9.cfg`, which is at 'C:\Program Files\SASHome\SASFoundation\9.4\sasv9.cfg' on my PC.
+First, the `RLANG` option must be set when SAS is started. This can be done by adding the following two lines in the SAS configuration file `sasv9.cfg`, which is at `C:\Program Files\SASHome\SASFoundation\9.4\sasv9.cfg` on my PC.
 
 ```
 -config "C:\Program Files\SASHome\SASFoundation\9.4\nls\en\sasv9.cfg"
@@ -101,7 +101,7 @@ SAS needs an `R_HOME` environment variable so that it knows where to find the co
 knitr::include_graphics("images/env_variable.png")
 ```
 
-One important thing is that you must specify the correct path to the R directory. In my case, since R 3.6.3 is installed in the folder/directory  'C:\Users\MyUserName\Documents\R\R-3.6.3', I set the 'Variable value' of `R_HOME` as 'C:\Users\MyUserName\Documents\R\R-3.6.3'.
+One important thing is that you must specify the correct path to the R directory. In my case, since R 3.6.3 is installed in the folder/directory  `C:\Users\MyUserName\Documents\R\R-3.6.3`, I set the 'Variable value' of `R_HOME` as `C:\Users\MyUserName\Documents\R\R-3.6.3`.
 
 After the setting up `cfg` file and `R_HOME`, you may need to restart your computer. 
 
