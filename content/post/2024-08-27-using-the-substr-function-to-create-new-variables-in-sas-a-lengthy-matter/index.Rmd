@@ -1,0 +1,118 @@
+---
+title: 'Using the SUBSTR Function to Create New Variables in SAS: A Lengthy Matter'
+author: ''
+date: '2024-08-27'
+slug: using-the-substr-function-to-create-new-variables-in-sas-a-lengthy-matter
+categories:
+  - SAS
+tags:
+  - SAS
+output:
+  blogdown::html_page:
+    toc: true    
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(httr)
+library(jsonlite)
+library(kableExtra)
+
+print_kbl <- function(df, title="", f_width=FALSE){
+  df |> 
+    kbl(caption = title) |> 
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = f_width, position = "left")
+}
+```
+
+# Introduction
+
+When working with data in SAS, the `SUBSTR` function is a powerful tool for extracting substrings from character variables. However, when using `SUBSTR` to create new variables, a critical detail can easily be overlooked — the length of the newly created variable.
+
+# Understanding SUBSTR and Variable Length
+
+The `SUBSTR` function allows you to extract a portion of a string based on a specified starting position and length. Let's explore this with a dataset containing FIPS codes and names for the state of Wisconsin and some of its counties:
+
+```
+data have;
+    input fipscode $ name $20.;
+    datalines;
+55000 Wisconsin
+55001 Adams County
+55003 Ashland County
+55005 Barron County
+55007 Bayfield County
+55009 Brown County
+55011 Buffalo County
+;
+run;
+```
+
+Suppose you want to create two new variables: `statecode` (the first 2 characters in the FIPS code) and `countycode` (the last 3 characters in the FIPS code). Here's how you might approach this:
+
+```
+data want;
+    set have;
+    statecode = substr(fipscode, 1, 2);
+    countycode = substr(fipscode, 3, 3);
+run;
+```
+
+# The Importance of Setting Variable Length
+
+In the code above, `statecode` and `countycode` are created using the `SUBSTR` function. However, both of these new variables will inherit the length of the original `fipscode` variable, which is **5** characters. As we can see here:
+
+```{r}
+tibble::tribble(
+  ~Column_Name, ~Column_Type, ~Column_Length,
+    "fipscode",       "char",             5L,
+        "name",       "char",            20L,
+   "statecode",       "char",             5L,
+  "countycode",       "char",             5L
+  ) %>% 
+  print_kbl()
+
+```
+
+Why Does This Happen? It is because SAS retains the length of the original variable when creating a new one using SUBSTR, or as stated in SAS documentation:
+
+>In a DATA step, if the SUBSTR (right of =) function returns a value to a variable that has not previously been assigned a length, then that variable is given the length of the first argument. ([SAS documentation](https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/lefunctionsref/n0n08xougp40i5n1xw7njpcy0a2b.htm))
+
+This can lead to inefficiencies in your data processing:
+
+-   Wasted Space: If the original variable was significantly longer, the new variable will occupy more storage space than necessary.
+-   Unintended Data: Any characters beyond the length of the extracted substring will remain in the new variable, often filled with blanks, which may cause issues in data analysis and reporting.
+
+# Setting the Length Correctly
+
+To avoid these pitfalls, we can explicitly set the length of the new variable before using `SUBSTR`. Here’s how you can do it:
+
+```
+data want_better;
+    set counties;
+    length statecode $2 countycode $3;
+    statecode = substr(fipscode, 1, 2);
+    countycode = substr(fipscode, 3, 3);
+run;
+```
+
+By specifying `length statecode $2 countycode $3;`, you ensure that `statecode` is 2 characters long and `countycode` is 3 characters long, which are the correct sizes. This optimizes the dataset for both storage and processing. If we check the attributes of variables in `want_better`, we see `countycode` and `statecode` have the desired lengths:
+
+```{r}
+tibble::tribble(
+  ~Column_Name, ~Column_Type, ~Column_Length,
+   "statecode",       "char",             2L,
+  "countycode",       "char",             3L,
+    "fipscode",       "char",             5L,
+        "name",       "char",            20L
+  ) %>% 
+  print_kbl()
+
+```
+
+
+# Summary
+
+When using `SUBSTR` to create new variables in SAS, always remember to set the length of the new variable appropriately. This small step can prevent inefficiencies and unexpected behavior in our data processing. It’s a simple yet good practice for anyone looking to write clean, efficient SAS code.

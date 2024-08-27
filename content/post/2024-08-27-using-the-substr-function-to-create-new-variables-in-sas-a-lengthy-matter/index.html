@@ -1,0 +1,209 @@
+---
+title: 'Using the SUBSTR Function to Create New Variables in SAS: A Lengthy Matter'
+author: ''
+date: '2024-08-27'
+slug: using-the-substr-function-to-create-new-variables-in-sas-a-lengthy-matter
+categories:
+  - SAS
+tags:
+  - SAS
+output:
+  blogdown::html_page:
+    toc: true    
+---
+
+<script src="{{< blogdown/postref >}}index_files/kePrint/kePrint.js"></script>
+<link href="{{< blogdown/postref >}}index_files/lightable/lightable.css" rel="stylesheet" />
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#understanding-substr-and-variable-length" id="toc-understanding-substr-and-variable-length">Understanding SUBSTR and Variable Length</a></li>
+<li><a href="#the-importance-of-setting-variable-length" id="toc-the-importance-of-setting-variable-length">The Importance of Setting Variable Length</a></li>
+<li><a href="#setting-the-length-correctly" id="toc-setting-the-length-correctly">Setting the Length Correctly</a></li>
+<li><a href="#summary" id="toc-summary">Summary</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>When working with data in SAS, the <code>SUBSTR</code> function is a powerful tool for extracting substrings from character variables. However, when using <code>SUBSTR</code> to create new variables, a critical detail can easily be overlooked — the length of the newly created variable.</p>
+</div>
+<div id="understanding-substr-and-variable-length" class="section level1">
+<h1>Understanding SUBSTR and Variable Length</h1>
+<p>The <code>SUBSTR</code> function allows you to extract a portion of a string based on a specified starting position and length. Let’s explore this with a dataset containing FIPS codes and names for the state of Wisconsin and some of its counties:</p>
+<pre><code>data have;
+    input fipscode $ name $20.;
+    datalines;
+55000 Wisconsin
+55001 Adams County
+55003 Ashland County
+55005 Barron County
+55007 Bayfield County
+55009 Brown County
+55011 Buffalo County
+;
+run;</code></pre>
+<p>Suppose you want to create two new variables: <code>statecode</code> (the first 2 characters in the FIPS code) and <code>countycode</code> (the last 3 characters in the FIPS code). Here’s how you might approach this:</p>
+<pre><code>data want;
+    set have;
+    statecode = substr(fipscode, 1, 2);
+    countycode = substr(fipscode, 3, 3);
+run;</code></pre>
+</div>
+<div id="the-importance-of-setting-variable-length" class="section level1">
+<h1>The Importance of Setting Variable Length</h1>
+<p>In the code above, <code>statecode</code> and <code>countycode</code> are created using the <code>SUBSTR</code> function. However, both of these new variables will inherit the length of the original <code>fipscode</code> variable, which is <strong>5</strong> characters. As we can see here:</p>
+<table class="table table-striped table-hover" style="width: auto !important; ">
+<caption>
+<span id="tab:unnamed-chunk-1">Table 1: </span>
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Column_Name
+</th>
+<th style="text-align:left;">
+Column_Type
+</th>
+<th style="text-align:right;">
+Column_Length
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+fipscode
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+5
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+name
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+20
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+statecode
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+5
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+countycode
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+5
+</td>
+</tr>
+</tbody>
+</table>
+<p>Why Does This Happen? It is because SAS retains the length of the original variable when creating a new one using SUBSTR, or as stated in SAS documentation:</p>
+<blockquote>
+<p>In a DATA step, if the SUBSTR (right of =) function returns a value to a variable that has not previously been assigned a length, then that variable is given the length of the first argument. (<a href="https://documentation.sas.com/doc/en/pgmsascdc/9.4_3.5/lefunctionsref/n0n08xougp40i5n1xw7njpcy0a2b.htm">SAS documentation</a>)</p>
+</blockquote>
+<p>This can lead to inefficiencies in your data processing:</p>
+<ul>
+<li>Wasted Space: If the original variable was significantly longer, the new variable will occupy more storage space than necessary.</li>
+<li>Unintended Data: Any characters beyond the length of the extracted substring will remain in the new variable, often filled with blanks, which may cause issues in data analysis and reporting.</li>
+</ul>
+</div>
+<div id="setting-the-length-correctly" class="section level1">
+<h1>Setting the Length Correctly</h1>
+<p>To avoid these pitfalls, we can explicitly set the length of the new variable before using <code>SUBSTR</code>. Here’s how you can do it:</p>
+<pre><code>data want_better;
+    set counties;
+    length statecode $2 countycode $3;
+    statecode = substr(fipscode, 1, 2);
+    countycode = substr(fipscode, 3, 3);
+run;</code></pre>
+<p>By specifying <code>length statecode $2 countycode $3;</code>, you ensure that <code>statecode</code> is 2 characters long and <code>countycode</code> is 3 characters long, which are the correct sizes. This optimizes the dataset for both storage and processing. If we check the attributes of variables in <code>want_better</code>, we see <code>countycode</code> and <code>statecode</code> have the desired lengths:</p>
+<table class="table table-striped table-hover" style="width: auto !important; ">
+<caption>
+<span id="tab:unnamed-chunk-2">Table 2: </span>
+</caption>
+<thead>
+<tr>
+<th style="text-align:left;">
+Column_Name
+</th>
+<th style="text-align:left;">
+Column_Type
+</th>
+<th style="text-align:right;">
+Column_Length
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left;">
+statecode
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+2
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+countycode
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+3
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+fipscode
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+5
+</td>
+</tr>
+<tr>
+<td style="text-align:left;">
+name
+</td>
+<td style="text-align:left;">
+char
+</td>
+<td style="text-align:right;">
+20
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>When using <code>SUBSTR</code> to create new variables in SAS, always remember to set the length of the new variable appropriately. This small step can prevent inefficiencies and unexpected behavior in our data processing. It’s a simple yet good practice for anyone looking to write clean, efficient SAS code.</p>
+</div>
