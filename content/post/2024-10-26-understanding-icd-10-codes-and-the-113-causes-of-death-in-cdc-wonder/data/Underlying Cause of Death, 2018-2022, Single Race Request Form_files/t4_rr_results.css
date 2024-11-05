@@ -1,0 +1,533 @@
+/* ------------------------------  Navigation on results, map and charts pages ---------------------------------------- */
+
+.save-disable div#quick-options-menu { opacity: 0.5 }
+.save-disable div#quick-options-menu ul.first li:hover ul { display: none; }
+.save-disable div#quick-options-menu ul.first li:hover { background:#f9f9ff; color: #12a !important; border: 1px solid #3e71b5; border-top: none; }
+
+#quick-options-menu { position:absolute; margin-top:-7px}
+
+#quick-options-menu ul.first ul { display: none}
+#quick-options-menu ul.first li:hover ul { display: block; position:absolute; top: -1px; left: 100%;}
+
+#quick-options-menu ul.first li:hover { background: #75a9ed; color: #fff !important; border: 1px solid #75a9ed; }
+#quick-options-menu ul.first:hover li { position: relative; }
+
+#quick-options-menu ul.first { margin-top: -1px}
+#quick-options-menu ul.first li { border: none !important; padding: 3px 6px 4px 6px !important; font-weight:normal; 
+		font-family:Verdana; color: #12a !important; margin-bottom:0;}
+
+#quick-options-menu ul.second { margin-left: -100px; margin-top: 22px; 
+		padding-top: 4px !important; padding-bottom: 4px !important; 
+		width: 204px; border: 3px solid #75a9ed; border-radius: 0 4px 4px 4px; }
+#quick-options-menu ul:hover li { border: none }
+#quick-options-menu ul:hover li a { padding: 0 0px !important; color:#12a; text-decoration:none;}
+#quick-options-menu ul.second li:hover { background:#f9f9ff; color: #c00;  }
+#quick-options-menu ul:hover li a:hover {color: #c00; text-decoration: underline }
+#quick-options-menu ul:hover li.disabled { color:#777 !important; font-weight: normal; padding-left: 7px !important }
+#quick-options-menu ul.second li { line-height:normal; padding-left:0 !important; padding-bottom: 3px !important; padding-top: 3px !important }
+
+#quick-options-menu ul li { font-size: 9pt !important }
+#quick-options-menu ul li a { font-size: 9pt !important }
+#quick-options-menu ul li.g { height: 20px; }
+
+#quick-options-menu ul { float: left; margin: 0; padding:0 !important;
+	background:#f9f9ff; color: #12a; border: 1px solid #3e71b5; border-top: none; border-radius: 0 0 4px 4px;
+	font-weight: normal; list-style:none; }
+
+#quick-options-menu ul.f ul { display: none !important;}
+#quick-options-menu ul.f li:hover ul { display: block !important; position:absolute; top: -1px; left: 100%;}
+
+/*#quick-options-menu ul.f:hover { color:#fff !important; background: #75a9ed !important; border: 1px solid #75a9ed !important; }*/
+#quick-options-menu ul.f:hover li { color:#fff !important; background: #75a9ed !important; border: 1px solid #75a9ed !important; }
+#quick-options-menu ul.f:hover li { position: relative; }
+
+#quick-options-menu ul.f { margin-top: 0px; margin-left: -197px; border: none; padding:0 !important; width:100%}
+#quick-options-menu ul.f li { border: none !important; padding: 3px 7px !important; font-weight:normal;  }
+
+#quick-options-menu ul.s { margin-left: -80px; margin-top: -10px; 
+		padding-top: 4px !important; padding-bottom: 4px !important; 
+		width: 110px; border: 3px solid #75a9ed; border-radius: 4px; }
+#quick-options-menu ul.s li { line-height:normal; padding-left:0 !important; padding-bottom: 3px !important; padding-top: 3px !important }
+#quick-options-menu ul.f:hover ul.s li { background:#f9f9ff !important;  border: 1px solid #f9f9ff !important; }
+
+
+.options-menu {
+	display:inline;
+}
+
+.options-menu a {
+	background: #f9f9ff; 
+	color: #12a !important; 
+	border: #3e71b5 1px solid; 
+	border-top: none !important;
+	border-radius: 0 0 4px 4px;
+	position: relative;  /* this corrects IE bug that prevents bottom border from showing */
+	text-decoration: none !important; 
+	font-weight: normal; 
+	padding: 3px 6px 4px 6px;
+	margin-left: 65px !important;
+	top: 1px !important;
+}
+
+.options-menu-cm {
+	margin-left: 100px !important;
+}
+
+.options-menu-cm a {
+	top: 2px !important;
+}
+
+.options-menu a:link {
+	text-decoration: none !important; 
+}
+.options-menu a:visited {
+	text-decoration: none !important; 
+}
+.options-menu a:hover {
+	color: #a00 !important;
+	text-decoration: none !important; 
+}
+.options-menu a:active {
+	text-decoration: none !important; 
+}
+
+.options-menu-disabled {
+	color: #888 !important;
+	border: #888 1px solid; 
+	cursor: default;
+}
+
+.options-menu-off {
+	font-weight: normal;
+}
+
+.response-links { 
+	border-top: #6ea1e5 2px solid !important; 
+	margin: 30px 0 30px 0 !important;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	width: 94%;
+}
+
+.response-links .current { 
+	background-color: #fffaf6;
+	color: #400 !important;
+	border: 1px solid #400;
+	border-top: none !important; 
+	border-radius: 0 0 4px 4px;
+	height: auto !important;
+	line-height: 1.1 !important;
+
+	padding: 0px 6px 1px 6px; 
+	margin-left: 10px;
+	margin-right: 2px;
+}
+
+.response-links a { 
+	font-family: Verdana; 
+	font-size: 9pt; 
+	margin-left: 8px;
+}
+
+.response-links a.options { 
+	font-family: Tahoma, Verdana; 
+	font-weight: bold; 
+	font-size: 10pt; 
+	margin-right:50px;
+}
+
+/*  a: tags must be listed in this order: link, visited, hover, active; 
+	see http://meyerweb.com/eric/css/link-specificity.html for info */
+.response-links a:link    { color: #12a }
+.response-links a:visited { color: #12a }
+.response-links a:hover   { color: #b00 }
+.response-links a:active  { color: #b00 }
+
+
+/* ------------------------------  Results page ----------------------------------------------------------------------- */
+
+.nndss-title {
+	width: 94%;
+	margin-left: 3% !important;  /* this way keeps left margin regardless, all element line up */
+	margin-right: auto;
+	margin-bottom: 8px;
+}
+.response-form {
+	width: 94%;
+	margin-left: 3% !important;  /* this way keeps left margin regardless, all element line up */
+/*	margin-left: auto;  this way when too wide table goes all the way left, looks a bit funky */
+	margin-right: auto;
+}
+.response-form thead th {
+/*	orig, new
+	background-color: #fff2dd;
+	background-color: #ffebcc;
+*/
+	background-color: #ffebcc;
+}
+.response-form thead th.k {
+	white-space: nowrap;
+	padding: 0 4px;
+}
+/*
+.response-form thead th a {
+
+	color: #038 !important;
+	font-weight: bold !important;
+}
+*/
+
+.msr {
+	color: #000;
+	font-weight: normal;
+}
+
+.msr a         { font-weight: bold !important; }
+.msr a:link    { color: #03a; text-decoration: none }
+.msr a:visited { color: #03a; text-decoration: none }
+.msr a:hover   { color: #c00; text-decoration: line-through }
+.msr a:active  { color: #c00; text-decoration: line-through }
+
+.response-form tbody th {
+	text-align: left;
+	padding: 3px 4px;
+	font-family: Arial;
+	background-color: #fff;
+}
+.response-form tbody th.v {
+	font-family: Verdana;
+}
+.response-form tbody th.k {
+	padding-left: 12px;
+	font-family: Verdana;
+}
+
+.response-form tbody th input.ba {
+	background: #fff;
+	color: #33f;
+	text-decoration: underline;
+	font-weight: bold;
+	border: none;
+	cursor: pointer;
+}
+.response-form tbody th input.ba:hover {
+	color: #c00;
+}
+
+.response-form td {
+	text-align: right;
+	padding: 3px 4px;
+	/* will need bkd color if figure out how to do wide screens like request form and let form go outside tabs div */
+	background-color: #fff; 
+}
+.response-form td.c {
+	text-align: center;
+}
+.response-form td.t {
+	font-weight: bold;
+	font-family: Verdana;
+/*	orig, new
+	background-color: #fff2dd;
+	background-color: #ffebcc;
+*/
+	background-color: #ffebcc;
+}
+.response-form td.tx {
+	text-align: left;
+	padding-left: 8px;
+}
+
+.response-form th.t {
+	text-align: center;
+	font-weight: bold;
+	font-family: Verdana;
+/*	orig, new
+	background-color: #fff2dd;
+	background-color: #ffebcc;
+*/
+	background-color: #ffebcc;
+}
+.response-form th i.n {
+	font-weight: normal;
+	font-style: normal;
+}
+
+
+.hdr th {
+	border: none !important;
+}
+
+.hdr th.lr {
+	min-width: 15px !important;
+}
+
+.hdr th.up {
+	min-width: 15px !important;
+}
+
+table .response-form {
+	border: 2px solid #6ea1e5;
+	border-right: 3px solid #6ea1e5 !important;
+}
+
+.response-form th  {
+	border: 1px solid #555;
+}
+
+.response-form td  {
+	border: 1px solid #555;
+}
+
+.response-form th.v2 {
+	border-top: none !important;
+	border-bottom: none !important;
+	font-family: Tahoma, Verdana;
+	white-space: nowrap;
+	text-align: center;
+}
+
+/* Needed if want to distinguish class th cells only, every other one...
+.response-form tbody tr.r2 th.v3 {
+	background: #eef5f5;
+}
+*/
+
+/* Use these to distinguish every other class section */
+.response-form tbody tr.r2 th {
+/*	background: #f0f8f8; too green...*/
+/*	background: #f2f6f8;*/
+	background-color: #f9f9fd; 
+}
+.response-form tbody tr.r2 td {
+/*	background: #f2f6f8;*/
+	background-color: #f9f9fd; 
+}
+
+/* blue line separating group sections */
+.response-form td.b {
+	padding: 1px 0 0 0 !important;
+	background: #8ad;
+	border-top: 1px solid #8ad;
+	border-bottom: 1px solid #8ad;
+}
+
+
+/* Up and down sort arrows */
+.sort-img1 {
+	height: 13px;
+	width: 12px !important;
+	border: none;
+	margin-left: 8px;
+}
+
+.sort-img2 {
+	height: 13px;
+	width: 12px !important;
+	border: none;
+	margin-left: 1px !important;
+}
+
+.measure-updn {
+	height: 18px;
+	width: 12px;
+	border: 0;
+	margin-left: 2px;
+}
+
+/* Left and right rearrange measures arrows */
+.lr-arrow {
+	display: block;
+	height: 10px;
+	width: 13px;
+	border: 0;
+	margin-right: 8px;
+}
+
+.lr-arrow2 {
+	display: block;
+	height: 15px;
+	width: 18px;
+	border: 0;
+}
+
+.footnotes {
+	margin-left: 5%;
+	margin-right: 5%;
+	margin-top: 10px;
+	text-align: left;
+	font-weight: bold;
+}
+.footnotes div {
+	margin-bottom: 3px;
+}
+
+.response-notes {
+	clear: right;
+	margin-left: 5% !important;
+	width: 90%;
+	max-width: 900px;
+}
+.response-notes td {
+	text-align: left;
+	vertical-align: top;
+	padding: 2px;
+}
+.response-notes th {
+	font-weight: bold;
+	text-align: left;
+	white-space: nowrap;
+	vertical-align: top;
+	padding: 2px;
+	padding-right: 10px;
+}
+.response-notes th.title {
+	color: #600; 
+	font-size: 12pt;  
+	border: 0;
+	padding-top: 0;
+	padding-bottom: 10px;
+}
+.caveats td {
+	padding-bottom: 10px;
+}
+.query-description td {
+	width: 90%;
+}
+
+.qd-para {
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.response-options-border {
+	border: 2px solid #6ea1e5;
+	border-left: 1px solid #6ea1e5;
+	border-bottom: 1px solid #6ea1e5;
+/*	border-radius: 0 8px 0 0;*/
+	margin-left: auto !important;
+	margin-right: auto !important;
+	margin-bottom: 25px;
+	width: 94%;
+}
+
+.response-options {
+	width: 100%;
+}
+
+.response-options td {
+	padding: 2px;
+/*	background: #fff;*/
+	background-color: #f9f9fd;
+}
+
+.response-options .firstcell {
+	padding-right: 5px;
+}
+
+.response-options input.inline {
+	margin-right: 40px;
+	margin-left: 4px;
+}
+
+.cur-measure {
+	color: #000;
+	padding-top: 4px;
+}
+.cur-measure-list {
+	font-weight: normal;
+	color: #000; 
+	padding: 4px 0 0 10px !important;
+}
+
+.unavailable-messages {
+	text-align: center; 
+	font-weight: bold; 
+	font-size: 11pt;
+	padding: 45px 20px;
+}
+
+.unavailable-message {
+	margin-bottom: 15px;
+}
+
+#options-form {
+	padding-top: 10px;
+}
+
+.report-form1 {
+	margin-top:20px;
+}
+.report-form2 {
+	margin-bottom: 40px;
+}
+
+
+/* ------------------------------  Charts and Maps pages -------------------------------------------------------------- */
+
+.chart-form td {
+	padding: 2px;
+}
+
+.map-form td {
+	padding: 2px;
+}
+
+.chart-img {
+	border: 1px dotted; 
+	margin: 4px 15px 0 15px; 
+	padding: 5px 15px 5px 5px;
+}
+
+.mapchart-citation {
+	margin: 30px 3% 15px 3%;
+	border-top: #6ea1e5 2px solid; 
+	font-weight: bold;
+	padding-top: 20px;
+	text-align: center;
+}
+
+.map {
+	padding: 0 .5rem 0 .5rem !important;
+}
+
+.map-title {
+	text-align: center;
+}
+
+.map-subtitle {
+	font-weight: bold;
+}
+
+.map-separator {
+	min-height: 30px;
+	height: 30px;
+}
+
+.map-container {
+    position: relative;
+    overflow: hidden;
+/*
+    padding-top: 56.25%;
+    padding-top: 66%;
+*/
+    padding-top: 78%;
+/*	width: 98%;*/
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 25px;
+	border: 1px solid #6ea1e5;
+}
+
+.map-large {
+	padding-top: 75%;
+}
+
+.map-iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+	overflow: hidden;
+}

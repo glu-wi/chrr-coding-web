@@ -1,0 +1,407 @@
+/*  ----------------- main finder body ---------------------- */
+
+.finder {
+}
+
+.finder .wonder-content {
+	padding: 0;
+}
+
+
+.finder-body {
+	border: none;
+	clear: both;
+}
+
+.finder-body td {
+	padding: 10px 20px 10px 20px;
+}
+
+.finder-message {
+	font-family: Verdana; 
+	font-size: 10pt; 
+	font-weight: bold; 
+	color: #900; 
+	background: #fff;
+	margin-bottom: 3px;
+	border: 1px dotted #666;
+	padding: 2px 5px;
+	white-space: normal;
+	width: 400px;
+}
+
+.finder-picks {
+	margin: 0 0 15px 35px;
+}
+
+.finder-picks span {
+	margin-left: 25px;
+}
+
+.finder-links {
+	margin: 5px 0 0 5px;
+}
+
+.finder-links a {
+	margin-left: 30px;
+}
+
+.highlights {
+	margin: 3px 0 3px 35px;
+	white-space: nowrap;
+	color: #000;
+	font-weight: normal;
+}
+
+.highlights label {
+	color: #000 !important;
+	font-weight: normal !important;
+	font-style: italic;
+}
+	
+.highlights textarea {
+	height: 180px; 
+	width: 200px; 
+	background: #fff; 
+	color: #666; 
+	border: 1px dotted #666;
+}
+
+.highlights-extra textarea {
+	height: 220px; 
+}
+
+
+/*  ---------- new rounded corner tabs  --------------------- */
+
+/* these are in addition to regular rounded-tabs styles */
+.finder-rounded-tabs li {
+	padding: 1px 0px 3px 0px;
+}
+
+.finder-rounded-tabs li input {
+	font-family: Verdana;
+	color: #112;
+	font-weight: normal;
+}
+
+/* back1 is color for regular finder, back2 for advanced finder, orig: #fff2dd, #ede0cb*/
+.finder-back1 td {
+/*	background-image: linear-gradient(#fff7e2, #fff);*/
+	background-color: #f9f9f9;
+}
+
+.finder-back2 td {
+/*	background-image: linear-gradient(#f2e5d0, #fff);*/
+	background-color: #f9f9f9;
+}
+
+.finder-back1 li.current {
+/*	background-color: #fff7e2;*/
+	background-color: #f9f9f9;
+}
+
+.finder-back2 li.current {
+/*	background-color: #f2e5d0;*/
+	background-color: #f9f9f9;
+}
+
+
+
+
+/*  ---------------- advanced mode textarea and move button ---------------------- */
+
+.finder-textarea {
+	padding: 25px 20px 10px 20px;
+	border: #668 1px solid;
+	background-color: #f9f9f9;
+}
+
+.finder-textarea textarea {
+	width: 180px;
+	height: 180px;
+	margin-top: 8px;
+}
+
+.finder-textarea-and {
+	padding: 12px 20px 10px 20px;
+}
+
+.finder-textarea-and textarea {
+	height: 90px;
+	margin-top: 0;
+}
+
+.finder-textarea-andp {
+	padding: 12px 20px 10px 20px;
+}
+
+.finder-textarea-andp textarea {
+	height: 75px;
+	margin-top: 0;
+}
+
+.finder-textarea-sect {
+	width: 180px;
+	margin-top: 8px;
+}
+
+.finder-textarea-sect span.close {
+	float: right;
+	font-weight: bold;
+	color: #073a90; 
+	font-size: 15px !important;
+}
+
+.finder-textarea-sect span.close:hover {
+	color: #a00;
+	cursor: pointer;
+}
+
+td.move-button {
+	vertical-align: middle;
+	padding: 0 20px 0 20px;
+}
+
+td.move-button-and {
+	vertical-align: top;
+}
+
+td.move-button-andp {
+	vertical-align: top;
+}
+
+.move-button button {
+	color: #226;
+	background-color: #fff;
+	border: #668 1px solid;
+	font-family: Verdana, sans-serif; 
+	font-weight: normal; 
+	font-size: 100%; 
+	text-align: center;
+	padding: 6px;
+	cursor: pointer;
+}
+
+.move-button-andp button {
+	padding: 5px 8px;
+	line-height: 1.1;
+	font-size:12px !important; 
+	margin-top: 86px;
+}
+
+
+/*  ----------------- codes list, buttons, etc  -------------------------------------- */
+/*  ----------------- color1 for regular mode, color2 advanced  ---------------------- */
+.codes-div {
+	margin-top: 4px;
+	width: 580px;
+	height: 180px;
+	overflow: scroll;
+	border-top: 2px solid #666;
+	border-left: 2px solid #666;
+	background-color: #fff;
+}
+
+.codes-div-extra {
+	height: 220px;
+}
+.codes-div-extra2 {
+/*	height: 235px;*/
+	height: 268px;
+}
+.codes-div-extra3 {
+/*	height: 345px;*/
+	height: 393px;
+}
+.codes-div-extra4 {
+/*	height: 455px;*/
+	height: 518px;
+}
+.codes-div-extra5 {
+/*	height: 542px;*/
+	height: 615px;
+}
+
+.codes-div-chrome {
+	margin-top: 4px;
+}
+
+.codes {
+	margin-top: -3px;
+	margin-left: -3px;
+	border-bottom: none;
+}
+
+.codes-chrome {
+	max-width: 650px;
+}
+
+.codes-color1 {
+	background: #fff;
+	color: #000;
+}
+
+.codes-color2 {
+	background: #fff;
+	color: #000;
+/*
+	background: #f6f6f6;
+	color: #555;
+*/
+}
+
+.browse-buttons {
+	margin-top: 5px;
+/*	margin-bottom: 8px; */
+	white-space: nowrap;
+}
+
+.browse-buttons input {
+	margin-right: 6px;
+}
+
+.finder-buttons input {
+/*	background-color: #f2f2f4; */
+	background-image: linear-gradient(#fff, #ebebec 50%);
+	color: #004; 
+	font-family: Verdana; 
+	font-size: 85%; 
+	padding: 1px 6px 2px 6px !important;
+	height: auto !important;
+	line-height: 1.1 !important;
+	border: #668 1px solid;
+/*	border-radius: 4px;*/
+}
+
+.finder-buttons input:hover {
+/*	background-color: #cef; */
+	background-image: linear-gradient(#fff, #acf);
+}
+
+.finder-buttons-andp {
+	margin: 0 !important;
+	margin-top: 1px !important;
+	padding: 0 !important;
+	text-align: center;
+}
+
+.finder-buttons-andp input {
+	margin: 0 !important;
+	font-size: 8.5pt !important; 
+	padding: 1px 5px 0 5px !important;
+	border-radius: 3px;
+}
+
+
+
+/* slightly lighter text for advanced mode */
+.text-lite { 
+	font-family: Verdana; 
+	font-size: 10pt; 
+	font-weight: normal; 
+	color: #333; 
+	line-height: normal
+}
+
+
+/*  ----------------------- search form ---------------------- */
+.finder-search {
+	margin: 5px 0 10px 0;
+	float: left;
+}
+
+.finder-search input { 
+	display: block;
+	margin-top: 10px;
+	margin-left: 20px;
+	margin-right: 20px;
+}
+
+.finder-search select {
+	margin-top: 10px;
+}
+
+.finder-search .finder-buttons {
+	margin-top: 20px;
+}
+
+.finder-note {
+	margin-bottom: 5px;
+	color: #000;
+	font-weight: normal;
+}
+
+.finder-search-hit {
+	color: #00f;
+}
+.finder-search-phrase {
+	background: white;
+	padding-left: 10px;
+	padding-right: 10px;
+	border: 1px solid #666;
+	font-weight: bold;
+	text-align: center;
+}
+
+/*  ----------------------- details page ---------------------- */
+.finder-details {
+	width: 400px;
+	height: 228px;
+	overflow: auto;
+	background: #fff;
+	border: 1px solid #666;
+	margin-bottom: 10px;
+	margin-top: 15px;
+}
+
+.finder-details-extra {
+	height: 268px;
+}
+
+.finder-details table { 
+}
+
+.finder-details th {
+	font-family: Arial; 
+	font-size: 10pt; 
+	background: #fff; 
+	color: #000; 
+	font-weight: bold; 
+	text-align: left;
+	padding: 3px 6px;
+	white-space: nowrap;
+	text-align: right;
+	vertical-align: top;
+}
+
+.finder-details td {
+	font-family: Arial; 
+	font-size: 10pt; 
+	background: #fff; 
+	color: #000; 
+	font-weight: normal;
+	padding: 3px 6px !important;
+}
+
+.finder-details-first th {
+	border-top: 1px solid #666;
+	border-bottom: 1px solid #666;
+	color: #000;
+	background: #f2f2f4;
+	font-family: Verdana;
+	text-align: right;
+}
+
+.finder-details-first td {
+	border-top: 1px solid #666;
+	border-bottom: 1px solid #666;
+	color: #000;
+	background: #f2f2f4;
+	font-family: Verdana;
+	font-weight: bold; 
+	text-align: left;
+}
+
+.finder-details-last {
+}

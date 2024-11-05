@@ -1,0 +1,538 @@
+// flags is a list of space-separated flags, will contain 'nocodes' when codes aren't shown
+function add(variableCode, flags) {
+
+	var textarea = document.form['V_' + variableCode];
+	var text = textarea.value;
+	if (text != '' && text.charAt(text.length - 1) != '\n')
+		text += '\n';
+	var codes = text.split('\n');
+	for (var n = 0; n < codes.length; n++) {
+		var index = codes[n].indexOf(' ');
+		if (index > -1)
+		codes[n] = codes[n].substring(0, index);
+	}
+
+	var idx = variableCode.indexOf("_AND");
+	if (idx > -1)
+		variableCode = variableCode.substring(0, idx);
+
+	var finderOptions = document.form['codes-' + variableCode].options;
+	var selections = '';
+	var selected = false;
+	for (var n = 0; n < finderOptions.length; n++) {
+		if (finderOptions[n].selected) {
+			selected = true;
+			var option = finderOptions[n];
+			var present = false;
+			for (var m = 0; !present && m < codes.length; m++)
+				if (codes[m] == option.value)
+					present = true;
+			// getLabel doesn't currently work when codes aren't shown
+			if (!present)
+				selections += parseOptionText(option.value, option.text, false, flags) + '\n';
+		}
+	}
+
+	if (!selected) {
+		alert("Please select item(s) to move.");
+		return;
+	}
+
+	text += selections;
+	textarea.value = text;
+}
+
+/*
+	Old UI - Add codes from code list to selections list.
+	For some reason if function was named add() it wasn't found - "unknown function"
+	Reason - the button was named add and that conflicted with the function named add...
+*/
+function add1() {
+
+	var code_options = document.form.codes.options;
+	var sel_options = document.form.selections.options;
+	var count = 0;
+	for (var n = 0; n < code_options.length; n++) {
+		if (code_options[n].selected) {
+			count++;
+			var option = code_options[n];
+			if (!selected(option)) {
+				var str = parseOptionText(option.value, option.text, true);
+				var newoption = new Option(str, option.value);
+				sel_options[sel_options.length] = newoption;
+			}
+			option.selected = false;
+		}
+	}
+
+	if (count == 0) {
+		alert("Please select item(s) to add.");
+	}
+	else {
+		sortOptions(sel_options);
+		//setSelectionsSize();
+	}
+}
+
+function andSectionAdd(variableCode) {
+
+	var elem = document.getElementById(variableCode + '-fand-sect');
+	var curSect = elem.value;
+
+	// hide current section close X for sections > 2
+	if (curSect > 2) {
+		var id = 'X' + variableCode + '-AND' + curSect;
+		replaceClass(id, 'displayon', 'displayoff');
+	}
+
+	curSect++;
+
+	// show new section and its close X
+	id = variableCode + '-AND' + curSect;
+	replaceClass(id, 'displayoff', 'displayon');
+	id = 'X' + variableCode + '-AND' + curSect;
+	replaceClass(id, 'displayoff', 'displayon');
+
+	// show new move button
+	id = 'M' + variableCode + '-AND' + curSect;
+	replaceClass(id, 'displayoff', 'displayon');
+
+	// make codes div in finder longer
+	id = 'codes-div-' + variableCode;
+	replaceClass(id, 'codes-div-extra' + (curSect-1), 'codes-div-extra' + curSect);
+	// and update DOM with new class name
+	document.getElementById(variableCode + '-fand-htadv').value = 'codes-div-extra' + curSect;
+
+	// hide add button if no more sections to show
+	if (curSect == 5) {
+		id = 'B' + variableCode + '-and-add';
+		replaceClass(id, 'displayon', 'displayoff');
+	}
+
+	// save current section number	
+	elem.value = curSect;
+}
+
+function andSectionClose(variableCode) {
+
+	var elem = document.getElementById(variableCode + '-fand-sect');
+	var curSect = elem.value;
+
+	// remove contents of current section
+	clearTextarea(variableCode + "_AND" + curSect);
+
+	// hide current section and its close X
+	var id = variableCode + '-AND' + curSect;
+	replaceClass(id, 'displayon', 'displayoff');
+	id = 'X' + variableCode + '-AND' + curSect;
+	replaceClass(id, 'displayon', 'displayoff');
+
+	// hide current move button
+	id = 'M' + variableCode + '-AND' + curSect;
+	replaceClass(id, 'displayon', 'displayoff');
+
+	// unhide add button if closing last section
+	if (curSect == 5) {
+		id = 'B' + variableCode + '-and-add';
+		replaceClass(id, 'displayoff', 'displayon');
+	}
+	
+	curSect--;
+
+	// make codes div in finder shorter
+	id = 'codes-div-' + variableCode;
+	replaceClass(id, 'codes-div-extra' + (curSect+1), 'codes-div-extra' + curSect);
+	// and update DOM with new class name
+	document.getElementById(variableCode + '-fand-htadv').value = 'codes-div-extra' + curSect;
+
+	// show new section close X for sections > 2
+	if (curSect > 2) {
+		var id = 'X' + variableCode + '-AND' + curSect;
+		replaceClass(id, 'displayoff', 'displayon');
+	}
+
+	// save current section number	
+	elem.value = curSect;
+}
+
+function clear(str) {
+	var index;
+	for (index = 0; index < str.length; index++) {
+		var ch = str.charAt(index);
+		if (ch != '+' && ch != '-' && ch != '>' && ch != ' '  && ch != '\t' && ch != '\u00a0')
+			break;
+	}
+	return str.substring(index);
+}
+
+function clearTextarea(variableCode) {
+	var textarea = document.form['V_' + variableCode];
+	textarea.value = '';
+}
+
+/*
+	variable is the div holding the finder. Scroll to it and then back a bit.
+*/
+function finderFocus(variable) {
+
+	var elem = document.getElementById(variable);
+	if (elem != null) {
+		elem.scrollIntoView();
+		window.scrollBy(0, -80);
+	}
+}
+
+function finderHighlights(select, tname) {
+
+	var ta = document.getElementById(tname);
+	if (ta == null)
+		return;
+	ta.value = '';
+	var options = select.options;
+	var totSel = 0;
+	for (var n = 0; n < options.length; n++) {
+		var option = options[n];
+		if (option.selected) {
+			if (totSel == 100) {
+				ta.value += 'More...\n';
+				break;
+			}
+			totSel++;
+			ta.value += getLabel2(option.text) + '\n'
+		}
+	}
+}
+
+// old version, doesn't work if not showing codes
+function getLabel(text, value) {
+
+	var start = text.indexOf('(');
+	if (value.indexOf('(') > -1)
+		start = text.indexOf('(', start + 1);
+	var end = text.lastIndexOf(')');
+
+	return text.substring(start, end + 1);
+}
+
+// works in all situations
+function getLabel2(text) {
+
+	// skip leading +, -, ' ', and &nbsp; or \u00a0
+	var index;
+	for (index = 0; index < text.length; index++) {
+		var char = text.charAt(index);
+		if (char == '\u00a0' || char == '+' || char == '-' || char == ' ')
+			continue;
+		break;
+	}
+
+	var str = text.substring(index, text.length);
+	// currently use double &nbsp;, turn into ' '
+	str = str.replace(/\u00a0\u00a0/g, ' ');
+	// turn any remaining single &nbsp; into ' ' - none currently...
+	str = str.replace(/\u00a0/g, ' ');
+	// turn ' ' at end of string into ''
+	str = str.replace(/[' ']$/, '');
+	return str;
+}
+
+/*
+	Adjust width of finder body and scroll to selected items when loading a page with a finder
+*/
+function loadFinder(variableCode, mode) {
+
+	// display regular or advanced finder depending on mode
+	if (mode == 'freg')
+		toggleFinder(variableCode, 'none', 'freg', 'fadv');
+	else if (mode == 'fadv')
+		toggleFinder(variableCode, 'none', 'fadv', 'freg');
+
+	// update "Currently selected" box
+	var codesSelect = document.getElementById("codes-" + variableCode);
+	if (codesSelect != null)
+		finderHighlights(codesSelect, variableCode + '-fhi');
+
+	var codesDiv = document.getElementById("codes-div-" + variableCode);
+
+	// adjust width
+	if (codesDiv == null || codesDiv.offsetWidth == 0)
+		return;
+	if (codesDiv.offsetWidth > codesSelect.offsetWidth)
+		codesDiv.style.width = (codesSelect.offsetWidth - 10) + 'px';
+
+	if (codesDiv.offsetWidth < 300) {
+		var body = document.getElementById("finder-body-" + variableCode);
+		body.style.width = '340px';
+	}
+
+	// scroll to last selection
+	var options = codesSelect.options;
+	var maxOption = 0;
+	for (var n = 0; n < options.length; n++)
+		if (options[n].selected)
+			maxOption = n;
+	loadFinderScroll(codesDiv, options.length, maxOption);
+}
+
+function loadFinders(variableCodes, modes) {
+
+	var codes = variableCodes.split(',');
+	var modes = modes.split(',');
+	for (var n = 0; n < codes.length; n++)
+		loadFinder(codes[n], modes[n]);
+}
+
+function loadFinderScroll(box, totOptions, maxOption) {
+
+	// check for properties needed to scroll the codes window
+	if (!box.scrollHeight || !box.offsetHeight)
+		return;
+
+	maxOption += 2;
+
+	// total height in pixels of all the codes
+	var totPx = box.scrollHeight;
+	// size of the visible window used to scroll
+	var winPx = box.offsetHeight;
+	// don't know why the 18, obtained by observation
+	var maxOffset = totPx - winPx + 18;
+	var oneOptionPx = totPx / totOptions;
+	// pixel count of last selected option = its index * # of pixels for one option
+	var targetPx = maxOption * (totPx / totOptions);
+	// pixels for top of visible window is target pixels minus half its height
+	var offsetPx = targetPx - (winPx / 2);
+	if (offsetPx < 0)
+		offsetPx = 0;
+	if (offsetPx > maxOffset)
+		offsetPx = maxOffset;
+
+	box.scrollTop = offsetPx;
+}
+
+
+function otherToggle(variable, relatedVariable, onSuffix, offSuffix) {
+
+	var vcode1 = variable.substring(variable.indexOf('.') + 1);
+	document.form['O_' + vcode1 + '_Fother'].value = variable + '-' + onSuffix;
+	replaceClass(variable + '-other', offSuffix, onSuffix);
+	toggleDisplay(variable + '-' + onSuffix, variable + '-' + offSuffix);
+
+	if (relatedVariable != 'none') {
+		var vcode2 = relatedVariable.substring(variable.indexOf('.') + 1);
+		document.form['O_' + vcode2 + '_Fother'].value = relatedVariable + '-' + onSuffix;
+		replaceClass(relatedVariable + '-other', offSuffix, onSuffix);
+		toggleDisplay(relatedVariable + '-' + onSuffix, relatedVariable + '-' + offSuffix);
+	}
+}
+
+/*
+	Called instead of getLabel() for the advanced finder Move Items Over cause getLabel()
+	doesn't handle the MCD indent variables that don't show codes.
+
+	Call text.match with a regular expression that matches all non-whitespace
+	characters. Also call with /g so an array of matches is returned, each member
+	of the array being a word. Then concatenate the words with a space between them.
+	Use the code passed in rather than the code in the text because the text uses
+	the display code which can include extra characters (* and dagger) and can also
+	have the leading > for search results.
+
+	We want the regular expression in the call to match() to find all non-whitespace
+	characters. ^\s by itself works in Mozilla (\s is all whitespace characters), but
+	IE doesn't include &nbsp; in the whitespace character list, so that has to be added
+	to the regular expression. Decimal value for &nbsp; is 160, hex a0, so \u00a0 is
+	included in the regular expression.
+*/
+function parseOptionText(code, text, truncate, flags) {
+
+	// words is the array of words
+	// first element may be + or -, next is display code, then label
+	var words = text.match(/[^\s\u00a0]+/g);
+	var str = code;
+	var start = 1;
+	if (words[0] == '-' || words[0] == '+') {
+		start = 2;
+	}
+
+	// no code in text so move starting place back one
+	// used by MCD indent variables
+	if (flags && flags.indexOf('nocodes') > -1)
+		start -= 1;
+
+	for (var n = start; n < words.length; n++)
+		str += " " + words[n];
+	
+	if (truncate && str.length > 24) {
+		str = str.substring(0, 20);
+		str += "...";
+	}
+	return str;
+}
+
+/*
+function parseOptionText(text) {
+
+	var words = text.match(/[^\s\u00a0]+/g);
+	var start = 1;
+	var str = words[0];
+	if (str == '-' || str == '+') {
+		start = 2;
+		str = words[1];
+	}
+
+//	if (str.charAt(0) == '\u2022')
+	if (str.charAt(0) == '>')
+		str = str.substring(1);
+	if (str.charAt(0) == '*')
+		str = str.substring(1);
+	
+	for (var n = start; n < words.length; n++)
+		str += " " + words[n];
+	
+	if (str.length > 24) {
+		str = str.substring(0, 20);
+		str += "...";
+	}
+	return str;
+}
+*/
+
+/*
+	Old UI: Remove codes from selections list.
+	For some reason if function was named remove() it wasn't found - "unknown function"
+*/
+function remove1() {
+	var options = document.form.selections.options;
+	var count = 0;
+	for (var n = 0; n < options.length; n++) {
+		if (options[n].selected) {
+			count++;
+			options[n--] = null;
+		}
+	}
+
+	if (count == 0)
+		alert("Please select item(s) to remove.");
+	//else
+		//setSelectionsSize();
+}
+
+function removeAll() {
+	var options = document.form.selections.options;
+	options.length = 0;
+	//setSelectionsSize();
+}
+
+function selected(option) {
+	var options = document.form.selections.options;
+	for (var n = 0; n < options.length; n++)
+		if (options[n].value == option.value)
+			return true;
+	return false;
+}
+/*
+function setSelectionsSize() {
+
+	var elem1 = document.getElementById("codes");
+	var size = elem1.size;
+	size = size < 6 ? 6 : size;
+	size = size > 12 ? 12 : size;
+
+	var elem = document.getElementById("selections");
+	elem.size = size;
+}
+*/
+
+function sortOptions(options) {
+	var arr = new Array(options.length);
+	for (var n = 0; n < options.length; n++) {
+		var option = new Option(options[n].text, options[n].value);
+		arr[n] = option;
+	}
+	arr.sort(sortOptionsCompare);
+
+	for (var n = 0; n < arr.length; n++) {
+		options[n].text = arr[n].text;
+		options[n].value = arr[n].value;
+	}
+}
+
+function sortOptionsCompare(a, b) {
+
+	var a = Number(a.value);
+	var b = Number(b.value);
+
+	if (a < b)
+		return -1;
+	if (a > b)
+		return 1;
+	return 0;
+}
+
+function submitCheck() {
+/*
+	if (target_flag == "popup")
+		target_flag = "self";
+	else
+		document.form.target = "_self";
+*/
+	if (document.finder_type == 'standalone')
+		return;
+
+	var options = document.form.selections.options;
+	for (var n = 0; n < options.length; n++)
+		options[n].selected = true;
+}
+
+function toggleFinder(variable, relatedVariables, onSuffix, offSuffix) {
+
+	toggleFinder2(variable, onSuffix, offSuffix);
+	if (relatedVariables != 'none') {
+		var relVars = relatedVariables.split(",");
+		for (var n = 0; n < relVars.length; n++)
+			toggleFinder2(relVars[n], onSuffix, offSuffix);
+	}
+}
+
+function toggleFinder2(variable, onSuffix, offSuffix) {
+
+	var vcode1 = variable.substring(variable.indexOf('.') + 1);
+	document.form['O_' + vcode1 + '_fmode'].value = onSuffix;
+	toggleDisplay(variable + '-' + onSuffix + '-intro', variable + '-' + offSuffix + '-intro');
+
+	var regHeight = '';
+	var advHeight = '';
+	var elem = document.getElementById(variable + '-fand-htreg');
+	if (elem != null) {
+		regHeight = elem.value;
+		advHeight = document.getElementById(variable + '-fand-htadv').value;
+	}
+
+	if (onSuffix == 'fadv') {
+		replaceClass(variable + '-fadv', 'displayoff', 'displayon');
+		replaceClass('move-' + variable, 'displayoff', 'displayon');
+		replaceClass('finder-' + variable, 'finder-back1', 'finder-back2');
+		replaceClass('finder-tabs-' + variable, 'finder-back1', 'finder-back2');
+		replaceClass('codes-' + variable, 'codes-color1', 'codes-color2');
+		replaceClass('finder-buttons-' + variable, 'finder-buttons-color1', 'finder-buttons-color2');
+		replaceClass('browse-msg-' + variable, 'normal', 'text-lite');
+		replaceClass('search-msg-' + variable, 'normal', 'text-lite');
+		replaceClass('fhi-' + variable, 'displayon', 'displayoff');
+		if (regHeight != '')
+			replaceClass('codes-div-' + variable, regHeight, advHeight);
+	}
+	else {
+		replaceClass(variable + '-fadv', 'displayon', 'displayoff');
+		// we decided not to continue doing this when Vaers got all those symptoms textareas
+		// clearTextarea(variable);
+		replaceClass('move-' + variable, 'displayon', 'displayoff');
+		replaceClass('finder-' + variable, 'finder-back2', 'finder-back1');
+		replaceClass('finder-tabs-' + variable, 'finder-back2', 'finder-back1');
+		replaceClass('codes-' + variable, 'codes-color2', 'codes-color1');
+		replaceClass('finder-buttons-' + variable, 'finder-buttons-color2', 'finder-buttons-color1');
+		replaceClass('browse-msg-' + variable, 'text-lite', 'normal');
+		replaceClass('search-msg-' + variable, 'text-lite', 'normal');
+		replaceClass('fhi-' + variable, 'displayoff', 'displayon');
+		if (regHeight != '')
+			replaceClass('codes-div-' + variable, advHeight, regHeight);
+	}
+}

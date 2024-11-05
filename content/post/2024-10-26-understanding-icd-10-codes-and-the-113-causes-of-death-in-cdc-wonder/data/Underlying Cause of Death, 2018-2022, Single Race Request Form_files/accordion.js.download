@@ -1,0 +1,167 @@
+/* -------------------------------------------------------------------------------------------------------------------------
+	Accordion sections:
+	Create an array called ocSections in request xsl file, containing one OCSection object for each section
+	Call openCloseSections() in onload
+	See current mort.xsl for minimal example, mort.xsl in br_open-close for bigger example
+
+	Defines one section, default closed
+	var ocSections = [ 
+		new OCSection(1, 'close')
+	];
+	There can be more than one tr, div, etc that are part of section 1.
+	Give all element ids like oc-sect1-1, oc-sect1-2, etc.	
+--------------------------------------------------------------------------------------------------------------------------- */
+
+
+/* ----------------------------------------------------------------------------------------------------------------------
+	"Class" definitions -- functions that can be used with new operator to create standard objects 
+--------------------------------------------------------------------------------------------------------------------- */
+
+/* defaultState = 'open' or 'close' */
+function OCSectionFinders(sectNum, defaultState, finders, finderModes) {
+	this.sectNum = sectNum;
+	this.defaultState = defaultState;
+	this.finders = finders;
+	this.finderModes = finderModes;
+}
+
+/* defaultState = 'open' or 'close' */
+function OCSection(sectNum, defaultState) {
+	this.sectNum = sectNum;
+	this.defaultState = defaultState;
+	this.finders = [];
+	this.finderModes = [];
+}
+
+function OCSection1() {
+	this.sectNum = 1;
+	this.defaultState = 'open';
+	this.finders = [];
+	this.finderModes = [];
+}
+
+
+
+/* ----------------------------------------------------------------------------------------------------------------------
+	Functions to open and close sections
+--------------------------------------------------------------------------------------------------------------------- */
+
+function closeAllSections() {
+
+	for (var n = 0; n < ocSections.length; n++) {
+		var section = ocSections[n];
+		var sectName = 'oc-sect' + section.sectNum;
+		var elem = document.getElementById(sectName);
+		if (elem == null)
+			continue;
+		openCloseSection('close', section);
+	}
+}
+
+function closeSection(sectionNum) {
+	if (ocSections == null)
+		return;
+
+	openCloseSection('close', ocSections[sectionNum - 1]);
+}
+
+function openAllSections() {
+
+	for (var n = 0; n < ocSections.length; n++) {
+		var section = ocSections[n];
+		var sectName = 'oc-sect' + section.sectNum;
+		var elem = document.getElementById(sectName);
+		if (elem == null)
+			continue;
+		openCloseSection('open', section);
+	}
+}
+
+function openCloseSections() {
+
+	if (ocSections == null)
+		return;
+
+	for (var n = 0; n < ocSections.length; n++) {
+		var section = ocSections[n];
+		var sectName = 'oc-sect' + section.sectNum;
+		var elem = document.getElementById(sectName);
+		if (elem == null)
+			continue;
+		openCloseSection(elem.value, section);
+	}
+}
+
+/*
+	Open or close a request form section, 
+	hide/display open and close buttons, note when closed
+	set value of hidden input that holds current open or closed state
+*/
+function openCloseSection(action, section) {
+
+	if (action == '')
+		action = section.defaultState;
+
+	var sectName = 'oc-sect' + section.sectNum;
+	var openButton = sectName + '-open';
+	var closeButton = sectName + '-close';
+
+	// when showing, heading notes need 'displayon', sub-heading notes need 'display-inline'
+	var noteName = sectName + '-note';
+	var noteElem = document.getElementById(noteName);
+	var noteDisplay = '';
+	if (noteElem != null)
+		noteDisplay = noteElem.className.indexOf('oc-sub-note') > -1 ? 'display-inline' : 'displayon';
+
+	var sendName = 'oc-send' + section.sectNum;
+	var sendElem = document.getElementById(sendName);
+
+	// toggle buttons and note, show the note when closed, hide the note when open
+	if (action == 'open') {
+		replaceClass(openButton, 'display-inline', 'displayoff');
+		replaceClass(closeButton, 'displayoff', 'display-inline');
+		if (noteElem != null)
+			replaceClass(noteName, noteDisplay, 'displayoff');
+		if (sendElem != null)
+			replaceClass(sendName, 'displayoff','display-inline');
+	}
+	else {
+		replaceClass(openButton, 'displayoff', 'display-inline');
+		replaceClass(closeButton, 'display-inline', 'displayoff');
+		if (noteElem != null)
+			replaceClass(noteName, 'displayoff', noteDisplay);
+		if (sendElem != null)
+			replaceClass(sendName, 'display-inline', 'displayoff');
+	}
+
+	// open or close all elements for the section that 'sectName' controls
+	// will find any of 1 - 10
+	for (var n = 1; n < 11; n++) {
+		var subName = sectName + '-' + n;
+		if (document.getElementById(subName) == null)
+			continue;
+		if (action == 'open')
+			replaceClass(subName, 'displayoff', 'displayon');
+		else
+			replaceClass(subName, 'displayon', 'displayoff');
+	}
+
+	// update value of O_sectName <input> element, it has id='sectName' and controls re-draw when return to page
+	var elem = document.getElementById(sectName);
+	if (elem != null)
+		elem.value = action;
+
+	// if opening section and there are finders, call loadFinders to set them up
+	if (action == 'open') {
+		for (var n = 0; n < section.finders.length; n++) {
+			loadFinder(section.finders[n], section.finderModes[n]);
+		}
+	}
+}
+
+function openSection(sectionNum) {
+	if (ocSections == null)
+		return;
+
+	openCloseSection('open', ocSections[sectionNum - 1]);
+}

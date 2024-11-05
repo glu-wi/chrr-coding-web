@@ -1,0 +1,659 @@
+---
+title: Create a crosswalk between 2022 Census tracts and 2020 counties in Connecticut
+  using Python
+author: GL
+date: '2024-04-17'
+slug: create-a-crosswalk-between-2022-census-tracts-and-2020-counties-in-connecticut-using-python
+categories:
+  - Python
+tags:
+  - Python
+output:
+  blogdown::html_page:
+    toc: true   
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(tidyverse)
+library(tidycensus)
+library(tigris)
+library(sf)
+library(ggiraph)
+library(kableExtra)
+
+print_kbl <- function(df, title="", f_width=FALSE){
+  df |> 
+    kbl(caption = title) |> 
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = f_width, position = "left")
+}
+```
+
+# Introduction
+
+The State of Connecticut (CT) has nine planning regions as county-equivalent geographic units. Connecticut requested to the Census Bureau to use the nine planning regions to replace the previous eight counties (i.e., legacy counties) which ceased to function as governmental and administrative entities in 1960.
+The Census Bureau approved the request and has implemented this change since 2022. 
+
+As a result, public data and geospatial products at CT county level from Census now reflect the new boundaries of the nine planning regions. Sincer 2024, all Census Bureau operations and publications exclusively uses the nine new county-equivalent boundaries, names, and codes. Importantly, the transition to county-equivalents in Connecticut will not affect block group and census tract boundaries. Both types of entities will continue to nest within the planning region boundaries.
+
+There are situations where we may need to re-construct data for legacy CT counties by aggregating data from Census tract-level data. For example, one may want to compare [ACS S2801](https://censusreporter.org/tables/B28001/) (Types of Computers and Internet Subscriptions) data between 2021 and 2022 at CT county level. A crosswalk between 2022 Census tracts and legacy counties in Connecticut is useful - one can aggregate new tract-level data to obtain data at legacy county-level.
+
+In this blog post, we’ll explore how to link the 2022 Census tracts with the 2020 counties in Connecticut using spatial analysis. Specifically, we’ll achieve this through spatial join using Python. In a future post, we will explore to achieve same results in R using the `sf` package.
+
+# Import packages
+
+```{python}
+import geopandas as gpd
+import matplotlib.pyplot as plt
+import pandas as pd
+import os
+import numpy as np
+```
+
+
+# CT counties
+
+use `tigris` to get counties geometries of state Connecticut for year 2020 and 2022
+
+```{r}
+ct_2020 <- tigris::counties("Connecticut", cb = FALSE, year = 2020)
+ct_2022 <- tigris::counties("Connecticut", cb = FALSE, year = 2022)
+
+```
+
+## counties 2020: 8
+```{r}
+gg1 <- ggplot(data = ct_2020, aes(fill = NAME, text = NAME,  label = NAME)) + 
+  geom_sf(color="black",
+          size=0.25, show.legend = FALSE, alpha = 0.1) + 
+  geom_sf_label(fill = NA,  # override the fill from aes()
+                fun.geometry = sf::st_centroid) +
+  theme_void()
+gg1
+```
+
+## counties 2022: 9
+```{r}
+gg2 <- ggplot(data = ct_2022, aes(fill = NAME, text = NAME,  label = NAME)) + 
+  geom_sf(color="black",
+          size=0.25, show.legend = FALSE, alpha=0.2) + 
+  geom_sf_label(fill = "white",  # override the fill from aes()
+                fun.geometry = sf::st_centroid) +
+  theme_void()
+gg2
+
+# ggplotly(gg, tooltip = "text")
+# ggplotly(gg, tooltip = "text") %>% 
+#   style(hoverlabel = list(bgcolor = "white")) %>%
+#   layout(xaxis = list(showline=FALSE),
+#          yaxis = list(showline=FALSE))
+```
+
+```{r}
+library(ggpubr)
+ggpubr::ggarrange(gg1, gg2, 
+          labels = c("2020", "2022"),
+          ncol = 2, nrow = 1) %>%  
+  annotate_figure(
+    bottom = text_grob("Counties in CT",
+    face = "bold", size = 12) )
+```
+
+```{r}
+ct_2022 %>% 
+  filter(COUNTYFP == "110") %>% 
+  ggplot() +
+  geom_sf()
+
+ct_2022 %>% 
+  filter(COUNTYFP == "110") %>% 
+  st_intersection(ct_2020) %>% 
+  ggplot() +
+  geom_sf()
+```
+
+## 09001: Fairfield County
+
+```{r}
+ct_2020 %>%  filter(COUNTYFP == "001") %>% 
+  ggplot() +
+  geom_sf()
+
+ct_2022 %>% 
+  st_intersection(ct_2020 %>%  filter(COUNTYFP == "001") ) %>% 
+  ggplot() +
+  geom_sf()
+
+x <- ct_2022 %>% 
+  st_intersection(ct_2020 %>% select(1:2) %>%  filter(COUNTYFP == "001") ) 
+
+sf_use_s2(FALSE)
+
+x %>% 
+  mutate(area = st_area(x)) %>% 
+  filter(area > units::set_units(1, "m^2")) %>% 
+  ggplot(aes(fill = NAME, text = NAME,  label = NAME)) +
+  geom_sf() +
+  ggtitle("09001")
+```
+
+
+```{r}
+plot_CT_county <- function(countyfp = "001"){
+  
+  p0 <- ct_2020 %>% 
+    filter(COUNTYFP == countyfp) %>% 
+    ggplot() +
+    geom_sf() +
+    ggtitle(paste0("09", countyfp))
+  
+  
+  p1 <- ct_2022 %>% 
+    st_intersection(ct_2020 %>%  filter(COUNTYFP == countyfp) ) %>% 
+    ggplot() +
+    geom_sf() +
+    ggtitle(paste0("09", countyfp))
+  
+  x <- ct_2022 %>% 
+    st_intersection(ct_2020 %>% select(1:2) %>%  filter(COUNTYFP == countyfp) ) 
+  
+  sf_use_s2(FALSE)
+  
+  p2 <- x %>% 
+    mutate(area = st_area(x)) %>% 
+    filter(area > units::set_units(10, "m^2")) %>% 
+    ggplot(aes(fill = NAME, text = NAME,  label = NAME)) +
+    geom_sf() +
+    ggtitle(paste0("09", countyfp))
+  
+  return(list(p0, p1, p2))
+  
+}
+
+ct_2020 %>% 
+  st_drop_geometry() %>% 
+  pull(COUNTYFP) %>% 
+  map(~plot_CT_county(countyfp = .x))
+ 
+# plot_CT_county(countyfp = "003")
+```
+
+
+# CT tracts
+`cb`: If `cb` is set to TRUE, download a generalized (1:500k) file. Defaults to FALSE
+(the most detailed TIGER/Line file)
+```{r}
+ct_tracts_2020 <- tigris::tracts(state = "CT", cb = FALSE, year = 2020)
+
+ct_tracts_2022 <- tigris::tracts(state = "CT", cb = FALSE, year = 2022)
+```
+
+## 2020 county + 2020 tract
+```{r}
+gg3 <- ggplot() + 
+  geom_sf(data = ct_tracts_2020, fill = NA) +
+  geom_sf(data = ct_2020, fill = NA, color="red", linewidth = 1)+
+  theme_void()
+gg3
+```
+
+## 2020 county + 2022 tract
+```{r}
+gg3b <- ggplot() + 
+  geom_sf(data = ct_tracts_2022, fill = NA) +
+  geom_sf(data = ct_2020, fill = NA, color="red", linewidth = 1)+
+  theme_void()
+gg3b
+```
+
+
+```{r}
+ggpubr::ggarrange(gg3, gg3b, 
+          labels = c("2020 county + 2020 tract", "2020 county + 2022 tract"),
+          ncol = 2, nrow = 1) %>% 
+  annotate_figure(
+    bottom = text_grob("Counties in CT",
+    face = "bold", size = 12) )
+```
+
+## 2022 county + 2022 tract
+
+```{r}
+gg4 <- ggplot() + 
+  geom_sf(data = ct_tracts_2022, fill = NA) +
+  geom_sf(data = ct_2022, fill = NA, color="blue", linewidth = 1)+
+  theme_void()
+
+gg4
+```
+
+```{r}
+ggpubr::ggarrange(gg3, gg4, 
+          labels = c("2020", "2022"),
+          ncol = 2, nrow = 1) %>% 
+  annotate_figure(
+    bottom = text_grob("Counties in CT",
+    face = "bold", size = 12) )
+```
+
+
+## tracts 2020 vs 2022
+```{r}
+ct_tracts_2020 %>% 
+  sf::st_drop_geometry() %>% 
+  select(1:2, GEOID) %>% 
+  anti_join(ct_tracts_2022 %>% sf::st_drop_geometry() %>% 
+              select(1:2, GEOID),
+            by = "GEOID")
+
+ct_tracts_2022 %>% 
+  sf::st_drop_geometry() %>% 
+  select(1:2, GEOID) %>% 
+  anti_join(ct_tracts_2020 %>% sf::st_drop_geometry()%>% select(1:2, GEOID),
+            by = "GEOID")
+```
+
+### TRACTCE
+
+“TRACTCE”, where “CE” stands for Census
+```{r}
+ct_tracts_2020 %>% 
+  sf::st_drop_geometry() %>% 
+  group_by(TRACTCE) %>% 
+  count(sort = TRUE)
+
+
+ct_tracts_2020 %>% 
+  sf::st_drop_geometry() %>% 
+  select(1:2, TRACTCE) %>% 
+  anti_join(ct_tracts_2022 %>% sf::st_drop_geometry() %>% 
+              select(1:2, TRACTCE),
+            by = "TRACTCE")
+
+ct_tracts_2022 %>% 
+  sf::st_drop_geometry() %>% 
+  select(1:2, TRACTCE) %>% 
+  anti_join(ct_tracts_2020 %>% sf::st_drop_geometry()%>% select(1:2, TRACTCE),
+            by = "TRACTCE")
+```
+
+```{r}
+ct_tracts_2020 %>% 
+  arrange(TRACTCE) %>% 
+  slice(1:3) %>% 
+  ggplot(aes(fill = NAME, text = NAME,  label = NAME)) + 
+  geom_sf(color="black",
+          size=0.25, show.legend = FALSE)
+
+ct_tracts_2022 %>% 
+  arrange(TRACTCE) %>% 
+  slice(1:3) %>% 
+  ggplot(aes(fill = NAME, text = NAME,  label = NAME)) + 
+  geom_sf(color="black",
+          size=0.25, show.legend = FALSE)
+```
+
+```{r}
+ct_tracts_2020 %>% 
+  select(1:3) %>% 
+  arrange(TRACTCE) %>% 
+  filter(COUNTYFP == "001")
+
+ct_tracts_2022 %>% 
+  select(1:3) %>% 
+  arrange(TRACTCE) %>% 
+  filter(COUNTYFP == "190")
+```
+
+
+```{r}
+x20 <- ct_tracts_2020 %>% 
+  arrange(TRACTCE) %>% 
+  slice(1) %>% 
+  st_coordinates() %>% 
+  as_tibble()
+
+x22 <- ct_tracts_2022 %>% 
+  arrange(TRACTCE) %>% 
+  slice(1) %>% 
+  st_coordinates() %>% 
+  as_tibble()
+
+identical(x20, x22)
+
+x20 %>% anti_join(x22, by = c('X', 'Y'))
+```
+
+
+```{r}
+x <- ct_tracts_2020 %>% 
+  st_overlaps(ct_tracts_2022, sparse = T)
+
+x <- ct_tracts_2020 %>% 
+  st_intersects(ct_tracts_2022, sparse = T)
+
+tibble(V = x) %>% 
+   unnest_wider(V, names_sep = "")
+```
+
+# 2020 county + 2022 tract
+```{r}
+library(ggiraph)
+
+ct_sel <- "003"
+
+# get centroid of each tract
+ct_tracts_2022 %>% 
+  mutate(centroid = st_centroid(geometry))
+
+x <- ct_tracts_2022 %>% 
+  st_join(ct_2020 %>%  filter(COUNTYFP == ct_sel),
+          join = st_intersects,
+          # join = st_within,
+          # largest = TRUE,
+          suffix = c("_2022", "_2020")) %>% 
+  filter(!is.na(STATEFP_2020))  
+  
+p <- ggplot() + 
+  geom_sf_interactive(data = x, fill = NA, aes(tooltip = NAMELSAD_2022, data_id = TRACTCE) ) + 
+  geom_sf_interactive(data = ct_2020 %>%  filter(COUNTYFP == ct_sel), fill = NA, color="red", linewidth = 1)+
+  theme_void()
+
+ggiraph::girafe(ggobj = p
+                , width_svg = 8, height_svg = 5
+                ) %>% 
+  girafe_options(opts_hover(css = "fill:cyan;"),
+                 opts_zoom(min = .8, max = 5))
+```
+
+
+https://stackoverflow.com/questions/62667218/keep-polygons-that-are-fully-or-partially-within-a-larger-one-without-a-negative
+
+>One alternative is to turn each tract into a point and intersect on those, which removes the coincident borders that gave me trouble. 
+>st_point_on_surface() is preferable to st_centroid() since it guarantees the point will lie on the surface of the polygon, whereas some polygons will have centroids lying outside its surface.
+
+
+```{r}
+ct_sel <- "001"
+
+# ct_tracts_2022[st_point_on_surface(ct_tracts_2022)[ct_2020 %>%  filter(COUNTYFP == ct_sel),],] %>% 
+  # tmap::qtm()
+x2 <- ct_tracts_2022[st_point_on_surface(ct_tracts_2022)[ct_2020 %>%  filter(COUNTYFP == ct_sel),],] 
+
+p2 <- ggplot() + 
+  geom_sf_interactive(data = x2, fill = NA, aes(tooltip = NAMELSAD, data_id = TRACTCE) ) + 
+  geom_sf_interactive(data = ct_2020 %>%  filter(COUNTYFP == ct_sel), fill = NA, color="red", linewidth = 1)+
+  theme_void()
+
+ggiraph::girafe(ggobj = p2
+                , width_svg = 8, height_svg = 5
+                ) %>% 
+  girafe_options(opts_hover(css = "fill:cyan;"),
+                 opts_zoom(min = .8, max = 5))
+```
+
+```{r}
+# 001: 228
+# 003: 235
+# 005: 52
+# 007: 41
+# 009: 199
+# 011: 67
+# 013: 32
+# 015: 30
+```
+
+
+```{r}
+# use a spatial object as the row selector, to select features that intersect with another spatial feature
+ct_tracts_2022[st_point_on_surface(ct_tracts_2022)[ct_2020 %>%  filter(COUNTYFP == ct_sel),],] %>%
+tmap::qtm()
+
+# centroids of tracts within `COUNTYFP == ct_sel`
+ct_tracts_2022 %>% 
+  st_point_on_surface() %>% 
+  select(geometry) %>% 
+  st_join(ct_2020 %>%
+            filter(COUNTYFP == ct_sel),
+          # left logical; if TRUE return the left join, otherwise an inner join
+          left = FALSE) %>% 
+  tmap::qtm()
+
+# tracts within `COUNTYFP == ct_sel`
+ct_tracts_2022 %>% 
+  st_join(
+    ct_tracts_2022 %>% 
+      st_point_on_surface() %>% 
+      select(geometry) %>% 
+      st_join(ct_2020 %>%
+                filter(COUNTYFP == ct_sel),
+              left = FALSE),
+    left = FALSE
+  ) %>% 
+  tmap::qtm()
+
+x3 %>% 
+  slice(1:2) %>% 
+  ggplot() +
+  geom_sf() + 
+  theme_void()
+
+ct_tracts_2022 %>% 
+  st_point_on_surface() %>% 
+  st_join(ct_2020 %>%filter(COUNTYFP == ct_sel),
+          join = st_intersects) %>%
+  tmap::qtm()
+
+st_join(
+      ct_tracts_2022,
+  ct_tracts_2022 %>% 
+  st_point_on_surface() %>% 
+  st_join(ct_2020 %>%  
+  filter(COUNTYFP == ct_sel)),
+
+    join = st_intersects
+  ) %>% 
+  tmap::qtm()
+
+x2_b <- ct_tracts_2022 %>% 
+  st_filter(ct_2020 %>%  filter(COUNTYFP == ct_sel), 
+            .predicates = st_point_on_surface)
+```
+
+# link 2022 tracts to 2020 counties
+
+```{r}
+get_tracts_in_county <- function(tracts, county, ct_fips){
+  df <- tracts[st_point_on_surface(tracts)[county %>%  filter(COUNTYFP == ct_fips),],] 
+  df$countyfp_2020 = ct_fips
+  return(df)
+}
+
+linked_tracts22_counties20 <- ct_2020 %>% 
+  st_drop_geometry() %>% 
+  janitor::clean_names() %>% 
+  pull(countyfp) %>% 
+  map_df(~get_tracts_in_county(tracts = ct_tracts_2022, county = ct_2020, ct_fips = .)) %>% 
+  janitor::clean_names()
+
+linked_tracts22_counties20
+```
+
+```{r}
+CT_linked_tracts22_counties20 <- linked_tracts22_counties20 %>% 
+  st_drop_geometry() %>% 
+  select(statecode = statefp, countycode_2022 = countyfp, tract_fips_2022 = geoid, countycode_2020 = countyfp_2020)
+
+CT_linked_tracts22_counties20
+```
+
+## save dict
+```{r eval=FALSE}
+write_csv(CT_linked_tracts22_counties20, "data/CT_linked_tracts22_counties20.csv")
+```
+
+
+```{r}
+linked_tracts22_counties20 %>% 
+  st_drop_geometry() %>% 
+  group_by(countyfp_2020) %>% 
+  count()
+```
+
+```{r}
+linked_tracts22_counties20 %>% 
+  st_drop_geometry() %>% 
+  filter(countyfp_2020 == "015") %>% 
+  arrange(geoid)
+```
+
+# link 2022 tracts to 2020 tracts
+
+```{r}
+link_CT_tracts <- function(tracts_new, tracts_old, tract_geoid){
+  df <- tracts_new[st_point_on_surface(tracts_new)[tracts_old %>%  filter(GEOID == tract_geoid),],] 
+  df$tract_geoid_2020 = tract_geoid
+  return(df)
+}
+
+linked_tracts_2022_to_2020 <- ct_tracts_2020 %>% 
+  st_drop_geometry() %>% 
+  janitor::clean_names() %>% 
+  pull(geoid) %>% 
+  map_df(~link_CT_tracts(tracts_new = ct_tracts_2022, tracts_old = ct_tracts_2020, tract_geoid = .)) %>% 
+  janitor::clean_names()
+
+linked_tracts_2022_to_2020
+```
+
+
+```{r}
+ct_tracts_2022[st_point_on_surface(ct_tracts_2022)[ct_tracts_2020 %>% filter(GEOID == "09009350400"),],] %>%
+tmap::qtm()
+```
+
+```{r}
+CT_linked_tracts_counties_2022_to_2020 <- linked_tracts_2022_to_2020 %>% 
+  st_drop_geometry() %>% 
+  select(statecode = statefp, tract_fips_2022=geoid, tract_fips_2020 = tract_geoid_2020) %>% 
+  left_join(CT_linked_tracts22_counties20,
+            by = c('statecode', 'tract_fips_2022'))
+
+CT_linked_tracts_counties_2022_to_2020
+```
+
+## save dict
+
+```{r eval=FALSE}
+write_csv(CT_linked_tracts_counties_2022_to_2020, "data/CT_linked_tracts_counties_2022_to_2020.csv")
+```
+
+
+# Ref: 2022 Tract Crosswalk
+
+https://github.com/CT-Data-Collaborative/2022-tract-crosswalk
+
+tract_fips_20 and town_fips_20 include the FIPS code from its county (county_fips_20)
+
+>Note that tracts that contained only water and were not within municipal boundaries are excluded from this crosswalk. These are 2020 tracts 09001990000, 09007990100, 09009990000, and 09011990100.
+
+```{r}
+CT_tractcrosswalk2022 <- read_csv("https://raw.githubusercontent.com/CT-Data-Collaborative/2022-tract-crosswalk/main/2022tractcrosswalk.csv") %>% 
+  glimpse()
+
+CT_tract22_county20_crosswalk <- CT_tractcrosswalk2022 %>% 
+  janitor::clean_names() %>% 
+  select(tract_fips_2020, tract_fips_2022, county_fips_2020) %>% 
+  filter(tract_fips_2020 != tract_fips_2022) %>% 
+  mutate(tract_fips_2022 = str_pad(tract_fips_2022, 11, "left", "0"),
+         tract_fips_2020 = str_pad(tract_fips_2020, 11, "left", "0"),
+         county_fips_2020 = str_pad(county_fips_2020, 5, "left", "0"))
+
+CT_tract22_county20_crosswalk %>% 
+  group_by(county_fips_2020) %>% 
+  count()
+
+
+CT_tract22_county20_crosswalk %>% 
+  filter(county_fips_2020 == "09015") %>% 
+  arrange(tract_fips_2022)
+```
+
+
+```{r}
+ct_tracts_2022 %>% 
+  st_drop_geometry() %>% 
+  janitor::clean_names() %>% 
+  select(tract_fips_2022 = geoid) %>% 
+  anti_join(
+    CT_tractcrosswalk2022 %>% 
+      janitor::clean_names() %>% 
+      select(tract_fips_2020, tract_fips_2022, county_fips_2020) %>% 
+      filter(tract_fips_2020 != tract_fips_2022) %>% 
+      mutate(tract_fips_2022 = str_pad(tract_fips_2022, 11, "left", "0"),
+             tract_fips_2020 = str_pad(tract_fips_2020, 11, "left", "0"),
+             county_fips_2020 = str_pad(county_fips_2020, 5, "left", "0")),
+    by = c("tract_fips_2022")
+  )
+```
+
+## compare with home-made dict
+
+```{r}
+CT_linked_tracts_counties_2022_to_2020 %>% 
+  anti_join(CT_tract22_county20_crosswalk)
+
+CT_tract22_county20_crosswalk %>% 
+  anti_join(CT_linked_tracts_counties_2022_to_2020)
+```
+
+
+# Python
+
+Introduction
+A crosswalk is a valuable tool for linking data across different geographic boundaries. In this blog post, we’ll explore how to create a crosswalk between the 2022 and 2020 Census tracts in Connecticut. We’ll use GeoPandas, a Python library for working with geospatial data, to achieve this.
+
+Prerequisites
+Before we begin, make sure you have the following:
+
+Python installed on your system.
+GeoPandas library installed (pip install geopandas).
+Data Sources
+We have two shapefiles:
+
+2022 Census tracts: Represents the geographic boundaries of tracts in Connecticut for the year 2022.
+2020 Census tracts: Represents the same tracts but for the year 2020.
+Steps to Create the Crosswalk
+Load the Shapefiles:
+Read the 2022 and 2020 Census tracts shapefiles using GeoPandas.
+You can download these shapefiles from the Census.gov website or other reliable sources.
+Spatial Join:
+Perform a spatial join between the two shapefiles based on their intersection.
+This will create a new GeoDataFrame containing the crosswalk.
+Save the Crosswalk:
+Save the crosswalk as a new shapefile (e.g., crosswalk_ct_2022_2020.shp).
+Python Code
+Python
+
+import geopandas as gpd
+
+# Load the 2022 Census tracts shapefile
+ct_2022 = gpd.read_file("2022_ct_tracts.shp")
+
+# Load the 2020 Census tracts shapefile
+ct_2020 = gpd.read_file("2020_ct_tracts.shp")
+
+# Perform a spatial join to create the crosswalk
+crosswalk = gpd.sjoin(ct_2022, ct_2020, how="inner", op="intersects")
+
+# Save the crosswalk as a new shapefile
+crosswalk.to_file("crosswalk_ct_2022_2020.shp")
+
+print("Crosswalk between 2022 and 2020 Census tracts in Connecticut created and saved as crosswalk_ct_2022_2020.shp")
+AI-generated code. Review and use carefully. More info on FAQ.
+Conclusion
+Creating a crosswalk between different census tracts allows us to link data across different time periods. GeoPandas simplifies this process by providing powerful tools for geospatial analysis.
+
+
+# ---------

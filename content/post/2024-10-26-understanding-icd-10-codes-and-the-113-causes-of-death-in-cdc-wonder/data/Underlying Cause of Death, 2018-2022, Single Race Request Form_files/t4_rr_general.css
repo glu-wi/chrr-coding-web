@@ -1,0 +1,1132 @@
+
+/* --------------------------------------------  General  ------------------------------------------------------ */
+
+.displayon { }
+.displayoff { display: none !important }
+.display-inline { display: inline }
+
+#error-messages {
+	text-align: left;
+	margin-bottom: 5px;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	width: 94%;
+}
+.request #error-messages {
+	width: 100%;
+}
+.notabs-content #error-messages {
+	width: 100%;
+}
+.error-message {
+	font-family:Verdana; font-size:10pt; font-weight:bold; color:#900; background-color:#f8ead2; 
+	padding-left: 7px; 
+	margin-bottom: 2px;
+}
+.error-message a {
+	font-family:Verdana; font-size:10pt; font-weight:bold; color:#600 !important; background-color:#f8ead2 }
+/* a: tags must be in order link, visited, hover, active; see http://meyerweb.com/eric/css/link-specificity.html for info */
+.error-message a:link {
+	font-family:Verdana; font-size:10pt; font-weight:bold; color:#600 !important; background-color:#f8ead2 }
+.error-message a:visited {
+	font-family:Verdana; font-size:10pt; font-weight:bold; color:#600 !important; background-color:#f8ead2 }
+.error-message a:hover {
+	font-family:Verdana; font-size:10pt; font-weight:bold; color:#600 !important; background-color:#f8ead2 }
+.error-message a:active {
+	font-family:Verdana; font-size:10pt; font-weight:bold; color:#600 !important; background-color:#f8ead2 }
+
+.error-header {
+	font-family: Verdana; font-size: 10pt; font-weight: bold; color: #ffffff; background-color: #bb0000; 
+	padding-left: 7px; 
+	margin-bottom: 2px;
+}
+
+.disabled { color: #888 !important; }
+.enabled { }
+
+#send-help {
+	text-align: center;
+	font-style: italic;
+	clear: both;
+}
+
+.footer-buttons {
+	text-align: center;
+	margin-top: 15px;
+}
+.footer-buttons input {
+	margin: 15px;
+	margin-top: 0;
+}
+
+.normal { font-family: Verdana !important; font-size:10pt !important; font-weight: normal !important; color: #000 !important; line-height: normal !important;}
+.normal li { font-family: Verdana !important; font-size:10pt !important; font-weight: normal !important; color: #000 !important; line-height: normal !important;}
+.normal a { font-family: Verdana !important; font-size:10pt !important; font-weight: normal !important; }
+/* a: tags must be in order link, visited, hover, active; see http://meyerweb.com/eric/css/link-specificity.html for info */
+.normal a:link { color: #3333ff !important; font-weight: normal !important; }
+.normal a:visited { color: #009 !important; font-weight: normal }
+.normal a:hover { color: #c00 !important; font-weight: normal }
+.normal a:active { color: #c00 !important; font-weight: normal }
+
+/* Formerly used for Clear values button in custom groups on results table options, now retired */
+.button1  { 
+	background-color: #e2e2e4; 
+	color: #555; 
+	border: #555 1px solid; 
+	font-weight: bold; 
+	margin-bottom: 2px; 
+	padding: 0 3px 0 3px;
+	cursor: pointer;
+}
+
+/* Used for standard Send and Reset buttons */
+.button2  { 
+	background-image: linear-gradient(#fff, #ebebec 50%);
+	color: #004; 
+	font-family: Verdana; 
+	font-size: 10pt; 
+	cursor: pointer;
+	padding: 1px 8px 2px 8px !important;
+	height: auto !important;
+	line-height: 1.1 !important;
+	border: #668 1px solid;
+/*	border-radius: 4px;*/
+}
+.button2:hover {
+	background-image: linear-gradient(#fff, #acf 80%);
+}
+
+.button2 .disabled {
+	background-image: none !important;
+	background-color: #eee !important;
+	color: #444 !important; 
+}
+.button2.disabled:hover {
+	background-image: none !important;
+	background-color: #eee !important;
+	color: #444 !important; 
+}
+
+
+/* smaller version of button2 */
+.button3  { 
+	background-image: linear-gradient(#fff, #ebebec 50%);
+	color: #004; 
+	font-family: Verdana; 
+	font-size: 11px; 
+	cursor: pointer;
+	padding: 1px 6px 2px 6px !important;
+	height: auto !important;
+	line-height: 1.0 !important;
+	border: #668 1px solid;
+/*	border-radius: 3px;*/
+}
+.button3:hover {
+	background-image: linear-gradient(#fff, #acf 80%);
+}
+
+/* larger version of button2 */
+.button4  { 
+	background-image: linear-gradient(#fff, #ebebec 50%);
+	color: #004; 
+	font-family: Verdana; 
+	font-size: 14px; 
+	cursor: pointer;
+	padding: 1px 11px 2px 11px !important;
+	height: auto !important;
+	line-height: 1.1 !important;
+	border: #668 1px solid;
+/*	border-radius: 4px; */
+}
+.button4:hover {
+	background-image: linear-gradient(#fff, #acf 80%);
+}
+
+.social-links a {
+	margin-left: 6px;
+}
+.social-links img {
+	height: 18px;
+	width: 18px;
+}
+
+/* ------------------------------  Page title and sub-title ------------------------------------------------------ */
+
+#wonder-message {
+	font-family: Verdana; font-size: 16px; 
+	color: #900;  
+	text-align: center;
+	padding:15px 15px 20px 15px;
+}
+
+.saved-message {
+	font-family: Verdana; 
+	font-size: 14px; 
+	width: 70%;
+	margin: 15px auto;
+	background-color: #fff;
+	border: 1px solid #48a;
+	padding: 20px;
+}
+
+.saved-message .sm-title {
+	font-size: 18px;
+	text-align: center;
+	margin-bottom: 10px;
+	color: #900;  
+}
+
+.saved-message table {
+	width: 100%;
+}
+
+.saved-message td {
+	text-align: left;
+	color: #25a;
+	padding-top: 6px;
+}
+
+.saved-message td.rt {
+	padding-left: 40px;
+}
+
+.saved-message ul {
+	text-align: left; 
+	margin-left: 0; 
+	margin-top: 15px;
+}
+
+.saved-message li {
+	font-family: Verdana; 
+	font-size: 14px; 
+	color: #900;
+	list-style: none;
+	margin-bottom: 10px;
+}
+
+.saved-message .social-links a {
+	margin-left: 4px;
+}
+
+.saved-message a:link {
+	font-family: Verdana !important; 
+	font-size: 14px !important; 
+}
+.saved-message a:visited {
+	font-family: Verdana !important; 
+	font-size: 14px !important; 
+}
+
+.saved-message td a:link {
+	color: #25a !important;
+}
+.saved-message td a:visited {
+	color: #25a !important;
+}
+
+.saved-message li a:link {
+	color: #900 !important;
+}
+.saved-message li a:visited {
+	color: #900 !important;
+}
+
+.sm-button  { 
+	background: #dff2ff;
+	color: #004; 
+	font-family: Verdana; 
+	font-size: 11px; 
+	padding: 1px 6px 2px 6px !important;
+	height: auto !important;
+	line-height: 1.0 !important;
+	border: #48a 1px solid;
+}
+
+.sm-button:hover {
+	background-image: linear-gradient(#fff, #acf 80%);
+}
+
+.title {
+	color: #245;
+	font-family: Verdana, sans-serif; 
+	font-size: 14pt; 
+	font-weight: normal;
+	text-align: center;
+	padding: 0 0 20px 0;
+	margin: 0 !important;
+}
+
+.title h1 {
+	font-family: Verdana, sans-serif; 
+	font-size: 14pt; 
+	font-weight: normal;
+	text-align: center;
+	margin: 0 !important;
+}
+
+.title h2 {
+	font-size: 12pt; 
+	font-weight: bold;
+	margin: 10px 0 0 0;
+}
+
+/* old method of doing titles, may still be present on some pages, functions now use h1 and h2 for 508 */
+.title .sub {
+	font-size: 12pt; 
+	font-weight: bold;
+	margin-top: 10px;
+}
+
+
+#send-msg {
+	width: 550px;
+	background-color: #fdfeff; 
+	margin-top: 18px;
+	margin-left: auto; 
+	margin-right: auto;
+	border: 2px solid #7cb0f5;
+	border-radius: 4px;
+}
+
+#send-msg input {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+#send-text { 
+	color: #c00; 
+	font-weight: bold; 
+	font-size: 11pt; 
+	text-align: center;
+	padding-top: 8px;
+}
+
+#progress-bar {
+	margin-left: 100px; 
+	margin-top: 5px; 
+	height: 8px; 
+	background-color: #c00; 
+	font-size: 5pt;
+}
+
+.about {
+	padding: 20px 3%;
+	font-family: Verdana !important; 
+	font-size: 13px !important; 
+	line-height: normal !important;
+}
+
+.about p {
+	margin-top: 10px;
+	font-family: Verdana !important; 
+	font-size: 13px !important; 
+	line-height: normal !important;
+}
+
+.about li {
+	font-family: Verdana !important; 
+	font-size: 13px !important; 
+	line-height: normal !important;
+}
+
+.about table {
+	margin: 0 0 15px 0;
+}
+
+
+.intro-para { 
+	text-align: left;
+	margin-top: 10px;
+}
+.intro-link { margin-left: 8px; margin-right: 12px }
+
+
+/* ------------------------------------------  Request form  ------------------------------------------------------ */
+
+.heading-line {
+	padding: 3px 8px;
+	background-image: linear-gradient(#85b9fd, #75a9ed 80%);
+	color: #fff !important; 
+	font-size: 15px;
+	text-align: left;
+	vertical-align: middle;
+	font-weight: bold;
+	margin-top: 25px;
+	margin-bottom: 15px;
+}
+
+.request {
+	padding: 0 12px 15px 12px !important;
+padding-top: 0 !important;
+}
+
+.request .wonder-content {
+	padding: 0 12px;
+}
+
+.req-form {
+	width: 100%
+}
+
+.req-form td { 
+	vertical-align: top; 
+	background-color: #fdfeff; 
+/*	background-color: #fd fe ff; proposed */
+/*	background-color: #fb fe ff; proposed */
+/*	background-color: #f8 fa fc;  another */
+/*	background-color: #f9 fa fb; another */
+/*	background-color: #f9 f9 fd; old */
+	color: #073a90; 
+	font-weight: bold; 
+	font-size: 13px; /* TP */
+}
+
+.req-form td a {
+	color: #073a90 !important; 
+	font-weight: bold; 
+}
+
+.req-form td label {
+	color: #073a90; 
+	font-weight: bold; 
+}
+
+.req-form td.hd {
+	padding: 2px 6px;
+/*	background-image: linear-gradient(#9be, #8ad 60%);*/
+/*	background-color: #77a0cc;*/ 
+/*	background-color: #4782ca;*/
+/*	background-color: #5795dd;*/
+/*	background-color: #75a9ed;*/   /*#75a9f2;*/
+/*	background-color: #b1dafb;*/
+/*	background-image: linear-gradient(#85b9fd, #75a9ed 80%);*/
+	background-color: #75a9ed;
+	color: #fff !important; 
+	font-size: 15px;
+	text-align: left;
+	vertical-align: middle;
+}
+
+.req-form td input {
+	margin-top: -3px;
+}
+
+.req-form td.hd span {
+	float: right;
+	vertical-align: top;
+}
+
+.req-form td.hd span.help {
+	margin-left: 10px;
+	padding: 0px 7px 0 7px;
+	color: #fff !important; /* TP */
+	font-size: 13px; /* TP */
+}
+
+.req-form td.hd a { 
+	font-weight: bold;
+	color: #fff !important;
+	font-size: 13px; /* TP */
+}
+
+.req-form td.hd a:link { color: #fff; }
+.req-form td.hd a:visited	{ color: #fff; }
+.req-form td.hd a:hover { color: #802b27;	}
+.req-form td.hd a:active { color: #802b27; }
+
+.req-form-cell {
+	padding: 15px 0 20px 10px;
+}
+
+.req-form-table td {
+	padding: 0 20px 8px 0;
+}
+
+.req-form-table tr.final td {
+	padding-bottom: 0 !important;
+}
+
+.req-form-table-sub td {  background-color:#fff; }
+.req-form-table-sub th {  background-color:#fff; }
+.req-form-table-sub a {  background-color:#fff; }
+.req-form-table-sub div {  background-color:#fff; }
+
+/* td needed to get styles applied */
+td.radio-cell {
+	padding-top: 15px;
+	padding-right: 5px;
+	text-align: right;
+	white-space: nowrap;
+	color: #000;
+	font-weight: bold;
+}
+
+.radio-cell p {
+	margin-bottom: 4px;
+	padding-right: 5px;
+	font-weight: bold;
+	font-family: verdana !important;
+}
+
+.radio-cell input {
+	margin-right: 0;
+}
+
+/* Use display: block to put select box below label. 
+   Was using <br> but caused extra vertical spacing in IE under some circumstances */
+.req-form-select {
+	margin-top: 4px !important;
+	display: block;
+}
+
+/* scroll bars for injury mechanism and any other very wide select list */
+.req-form-select-wide-div {
+	margin-top: 4px !important;
+	width: 400px;
+	height: 300px;
+	overflow: scroll;
+	border-top: 2px solid #888;
+	border-left: 2px solid #888;
+	border-right: 1px solid #ccc;
+	border-bottom: 1px solid #ccc;
+}
+
+.req-form-select-wide {
+	border: none;
+}
+
+.extra-height { line-height: 1.7 }
+.firstrow td { padding-top: 15px !important; }
+.lastrow td { padding-bottom: 20px !important; }
+.firstcell { padding-left: 15px !important; }
+.lastcell { padding-right: 15px !important; }
+.finder-margin { margin-left: 20px }
+
+/* a: tags must be in order link, visited, hover, active; see http://meyerweb.com/eric/css/link-specificity.html for info */
+.req-form a:link { color: #073a90; font-weight: bold;}
+.req-form a:visited	{ color: #073a90; }
+.req-form a:hover { color: #802b27;	} /* was #c00 */
+.req-form a:active { color: #802b27; }
+
+.multiple-note {
+	font-weight: normal;
+	color: #000;
+}
+
+.nested-table-options td { 
+	padding: 1px 6px 1px 2px !important;
+	vertical-align: top; 
+	font-size: 13px;
+}
+.nested-table-options th { 
+	padding: 1px 6px 1px 2px !important;
+	vertical-align: top; 
+}
+.nested-table-options td select { 
+	margin-right: 5px; 
+}
+.nested-table-options .extra-vertical-space td {
+	padding-top: 8px !important;
+}
+.nested-table-options .extra-vertical-space th {
+	padding-top: 8px !important;
+}
+.nested-table-options th {
+	text-align: right;
+	white-space: nowrap;
+	background-color: #fdfeff; 
+	color: #073a90 !important; 
+	font-weight: bold !important; 
+	font-size: 13px;
+}
+/* in case someone wants to wrap Group Results By, this should prevent it */
+.nested-table-options th label a {
+	white-space: nowrap !important;
+}
+
+.nested-table-options th a:link { color: #073a90 !important; }
+.nested-table-options th a:visited	{ color: #073a90 !important; }
+
+.nested-table-options label.disabled  {
+	color: #888 !important;
+}
+.nested-table-options td.disabled {
+	color: #888 !important;
+}
+
+table.range  {
+	margin-top: 8px;
+}
+.range td {
+	margin: 0;
+	padding: 0;
+}
+.range input {
+	text-align: right;
+}
+.range td.rdefs {
+	text-align: center;
+	color: #000;
+	font-weight: normal;
+}
+.range td.rto {
+	padding-left: 4px;
+	padding-right: 4px;
+}
+.range-clear {
+	height: 18px; 
+	width: 15px; 
+	margin-left: 8px; 
+	border: 1px solid #fdfeff;
+	padding: 2px 1px 0px 2px;
+}
+.range-clear:hover {
+	border: 1px solid #48e;
+	background: #ffebce;
+}
+
+table.date-range  {
+	margin-top: 8px;
+}
+.date-range td {
+	margin: 0;
+	padding: 0 5px 5px 0;
+}
+.date-range td.rdefs {
+	padding-left: 10px;
+	color: #000;
+	font-weight: normal;
+}
+.date-range td.rclear {
+	vertical-align: middle; 
+	padding: 0;
+}
+
+.measure-list {
+	margin: 0;
+	padding: 0;
+}
+.measure-list li {
+	list-style-type: none;
+	display: inline;
+	padding-right: 20px;
+}
+.measure-list li label {
+	color: #073a90; 
+	font-weight: bold; 
+	font-family: verdana;
+}
+.measure-list li.default label {
+	color: #000;
+	font-family: verdana;
+}
+.measure-list li input {
+	margin-right: 5px;
+}
+.measure-list p {
+	margin: 2px 0 0 0;
+}
+
+/*
+	blues from gradient of #7799cc(form section header bar blue) to white.
+	gradient 300 pixels high, white at position 0 and 7799cc at postion 300.
+	e9eef6	  at position 50
+	dde6f2	  at position 75
+	d2ddee	  at position 100
+	bbcce5	  at position 150
+	a4bbdd	  at position 200
+	8eaad4	  at position 250
+	7799cc		at position 300
+*/
+
+
+/* --------------------- rounded tabs and page connected to tabs -------------------------------------------------- */
+
+/* tabs sit above this div. provides border around entire page */
+.wonder-content {
+	background: #fdfeff;
+	clear: both;
+/*	border-radius: 0 8px 0 0; */
+	border-right: 3px solid #7cb0f5;
+	border-top: 3px solid #7cb0f5;
+	border-left: 1px solid #70a3e0;
+	border-bottom: 1px solid #70a3e0;
+}
+
+.tab-div3 {
+	background: #fdfeff;
+	clear: both;
+	border-radius: 0 8px 0 0;
+	margin-bottom: 25px;
+/*--- proposed
+	border-right: 4px solid #85b9fd;
+	border-top: 4px solid #85b9fd;
+	border-left: 1px solid #85b9fd;
+	border-bottom: 1px solid #85b9fd;
+---*/
+
+
+	border-right: 4px solid #7cb0f5;
+	border-top: 4px solid #7cb0f5;
+	border-left: 1px solid #70a3e0;
+	border-bottom: 1px solid #70a3e0;
+
+/*--- proposed
+	border-right: 4px solid #75a9ed;
+	border-top: 4px solid #75a9ed;
+	border-left: 1px solid #75a9ed;
+	border-bottom: 1px solid #75a9ed;
+---*/
+/*--- current
+	border-right: 4px solid #8ad;
+	border-top: 4px solid #8ad;
+	border-left: 1px solid #779;
+	border-bottom: 1px solid #779;
+---*/
+}
+
+.tab-div3-results {
+	padding: 0 3%;
+}
+
+/* standard upper right rounded corner, when just need to add this to something else, like section one header right cell */
+.round-top-rt {
+	border-radius: 0 8px 0 0;
+}
+
+.rounded-tabs {
+	position: relative;
+	top: 3px;
+}
+
+.rounded-tabs ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.rounded-tabs li {
+	margin: 0;
+	padding: 0;
+	float: left;
+	margin-right: 6px;
+	background-image: linear-gradient(#d4effd 25%, #87b9f8 85%, #75a9ed);
+/*	background-image: linear-gradient(#fff, #fdfeff 15%, #87b9f8 85%, #75a9ed);*/
+	padding: 3px 0px 4px 0px;
+	border: 1px solid #70a3e0;
+	border-bottom: none;
+/*	border-radius: 6px 6px 0 0;*/
+}
+
+.rounded-tabs li input {
+	margin: 0;
+	padding: 0;
+	display: block;
+	text-decoration: none;
+	font-family: Verdana; 
+	font-size: 9pt;  
+	font-weight: normal;
+	color: #224;
+	cursor: pointer;
+	border: none;
+	background: none;
+	padding: 0px 15px 0px 15px;
+	height: auto !important;
+	line-height: 1.2 !important;
+}
+
+.rounded-tabs li input:hover {
+	color: #900;
+}
+
+.rounded-tabs li.current  {
+	background: none;
+	background-color: #fdfeff;
+	border: 1px solid #70a3e0;
+	border-bottom: none;
+}
+
+/* use current and single for jump pages with one tab */
+.rounded-tabs li.single {
+	padding: 3px 15px 2px 15px !important;
+	line-height: normal;
+	font-family: verdana !important;
+}
+
+.rounded-tabs li.current input {
+	background: none;
+	border: none;
+	cursor: text;
+	height: auto !important;
+	line-height: 1.2 !important;
+}
+.rounded-tabs li.current input:hover {
+	color: #224;
+}
+
+.rounded-tabs li.iagree input {
+	color: #777;
+}
+
+/* anchor tags used on welcome pages */
+.rounded-tabs li a {
+	margin: 0;
+	display: block;
+	text-decoration: none !important;
+	font-family: Verdana; 
+	font-size: 9pt !important;  
+	font-weight: normal;
+	color: #224 !important;
+	cursor: pointer;
+	padding: 0px 15px 0px 15px !important;
+}
+
+.rounded-tabs li a:hover {
+	text-decoration: none !important;
+}
+.rounded-tabs li.current a:hover {
+	text-decoration: none !important;
+}
+
+.rounded-tabs li.current a {
+	display: block;
+	color: #224 !important;
+	background-color: #fdfeff;
+	font-weight: normal !important;
+	cursor: text;
+	padding: 0px 15px 0px 15px !important;
+}
+
+
+/* --------------------- styling for major elements -------------------------------------------------- */
+
+
+/* T4 */
+.wonder {
+	padding: 0 1rem 0 1rem !important;
+	margin: 0 !important;
+	margin-top: -20px !important;
+}
+
+/*	provides a margin around page excluding header and footer. this so that header and footer go entire width of window. */
+.div-body {
+	padding: 15px 0; /* TP */
+}
+
+
+/*	
+	New UI, no longer need to move wheat to div-body on short pages. Old comment:
+	background wheat moves to the div-body on short pages. otherwise there would be large amounts of solid wheat below the footer.
+*/
+
+.small-page .div-body {
+	padding-bottom: 50px;
+}
+
+
+/* a div with blue inset border for pages that don't need tabs, admin.xsl so far */
+.notabs-content {
+	background: #fdfeff;
+	border-top: 3px solid #7cb0f5;
+	border-right: 3px solid #7cb0f5;
+	border-left: 1px solid #70a3e0;
+	border-bottom: 1px solid #70a3e0;
+	border-radius: 0 8px 0 0;
+	padding-left: 2%;
+	padding-right: 2%;
+}
+
+.jumppage {
+	padding-left: 3%;
+	padding-right: 3%;
+	padding-bottom: 3%;
+	font-family: verdana;
+	font-size: 13px;
+}
+
+.jumppage ul {
+	font-family: verdana;
+	font-size: 13px;
+	line-height: normal !important;
+}
+
+.jumppage ol {
+	font-family: verdana;
+	font-size: 13px;
+	line-height: normal !important;
+}
+
+.jumppage li {
+	font-family: verdana;
+	font-size: 13px;
+	line-height: normal !important;
+	margin-bottom: 8px;
+}
+
+.jumppage .backlink {
+	display: block;
+	margin-top: 10px;
+	font-style: italic;
+}
+
+.jumppage .para1 {
+	margin-top: 15px;
+}
+
+.jumplist {
+	margin-top: 15px;
+	margin-bottom: 15px;
+}
+
+.jumplist .title {
+	font-size: 11pt;
+	font-weight: bold;
+	color: #234;
+}
+
+.jumplist ul {
+	margin-top: 8px;
+	margin-bottom: 0;
+	font-family: verdana;
+	line-height: normal !important;
+}
+
+.jumplist li {
+	margin-bottom: 10px;
+	font-family: verdana;
+	line-height: normal !important;
+}
+
+.jumplist li a {
+	margin-left: 50px;
+	font-family: verdana;
+	line-height: normal !important;
+}
+
+.jumplist ul.link-normal li a {
+	margin-left: 0;
+}
+
+.jumplinks {
+	margin: 10px 40px 15px 40px !important;
+}
+
+.jumplinks a {
+	display: block;
+	margin-top: 10px;
+	font-weight: bold;
+}
+
+.lastmod {
+	text-align: center;
+	margin-top: 15px;
+}
+
+/* --------------------- standard utilities bar --------------------------------------------------
+	help links and action buttons at top of each page just under tabs
+*/
+
+.top-utilities-bar {
+	margin-top: 10px !important;
+	margin-left: auto !important;
+	margin-right: auto !important;
+	width: 94%;
+}
+
+.request .top-utilities-bar {
+	margin-bottom: 25px !important;
+	width: 98%;
+}
+
+.top-utilities-bar a {
+	margin-right: 15px;
+	font-size: 9pt;
+	font-family: Tahoma, Arial;
+}
+
+.top-utilities-bar .related {
+	margin-right: 30px;
+	font-family: Verdana;
+	font-style: italic;
+}
+
+.top-util-buttons {
+	text-align: right;
+	white-space: nowrap;
+}
+
+.top-util-buttons input {
+	margin-left: 10px;
+}
+
+
+/* --------------------- open / close -------------------------------------------------- */
+
+/* open/close +/- buttons */
+.oc-button {
+	vertical-align: middle; 
+	font-weight: bold; 
+	margin-right: 5px;
+	cursor: pointer;
+	border-radius: 3px;
+}
+
+.oc-button-minus {
+	font-family: arial; 
+	font-size: 11pt !important; 
+	padding: 0 5px !important;
+}
+
+.oc-button-plus {
+	font-family: verdana; 
+	font-size: 10pt !important; 
+	padding: 0 4px !important;
+}
+
+/* lighter background for +/- sub-section buttons */
+.oc-button-sub {
+/*	background-image: linear-gradient(#fff, #fefefe); orig sub*/
+/*	background-image: linear-gradient(#fff, #ebebec 50%); button2 */
+	background-image: linear-gradient(#fff, #ebf2fa);
+}
+
+/* div used as button on vaers form to show/hide more info */
+.oc-info {
+	padding: 2px 4px !important;
+	margin-left: 15px;
+	vertical-align: middle; 
+	height: 80%;
+	font-size: 9pt !important; 
+	font-family: Verdana; 
+	font-weight: normal; 
+	white-space: nowrap;
+/*	background-image: linear-gradient(#fff, #fefefe);*/
+	background-image: linear-gradient(#fff, #ebebec 50%);
+	color: #004; 
+	border: #668 1px solid;
+	border-radius: 4px;
+	cursor: pointer;
+}
+.oc-info:hover {
+	background-image: linear-gradient(#fff, #acf 80%);
+}
+
+/* short note below header line when section is closed */
+.oc-note {
+	padding: 6px 0 15px 20px !important;
+	font-size: 9pt;
+	font-weight: normal !important;
+	font-style: italic;
+	color: #000 !important;
+}
+
+/* sub section stuff */
+
+.oc-sub-help {
+	display: inline; 
+	float: right;
+	padding-right: 8px;
+}
+.oc-sub-help a:link { color: #56d; }
+.oc-sub-help a:visited	{ color: #56d; }
+
+.oc-sub-heading {
+	border-top: 3px solid #75a9ed;
+	padding-top: 3px;
+}
+
+.oc-sub-hr {
+	width: 98%; 
+	margin-left:0; 
+	margin-right:auto; 
+	margin-bottom:4px; 
+	color:#68b; 
+	background-image:linear-gradient(#75a9ed, #def, #fdfeff);
+	height:2px; 
+	border-width:0;
+}
+
+.oc-sub-note {
+	font-weight: normal !important; 
+	color: #000 !important; 
+	font-style: italic;
+	display: inline; /* TP */
+	margin-left: 25px;
+}
+
+.oc-sub-section {
+	margin-top: 20px; 
+	width: 100%;
+}
+
+.oc-sub-send {
+	float: right;
+	padding-right: 20px;
+}
+
+#aar_off {
+	margin-top: 10px;
+}
+
+
+/* --------------------- saved request -------------------------------------------------- */
+
+.initial-save-message {
+	margin:  20px 8%;
+	background: #fff;
+	text-align: center;
+	font-weight: bold;
+	font-size: 15px;
+	border: 1px solid #779;
+	padding: 30px;
+}
+
+.initial-save-message ul {
+	margin-top: 15px;
+	text-align: left !important;
+}
+
+.initial-save-message li {
+	font-size: 14px !important;
+	margin: 7px 0;
+}
+
+.initial-save-message a {
+	font-weight: bold;
+	font-size: 14px;
+}
+
+.save-disable {
+	opacity: 0.5; 
+	border: 1px solid #555; 
+	margin: 20px 4px;
+}
+
+.save-disable a, .save-disable div, .save-disable input,
+.save-disable label, .save-disable select {
+
+	pointer-events: none !important;
+	tab-index: -1;
+/*	overflow: hidden !important; if want to disable finder lists in FF */
+	cursor: default !important; /* helps look for older IE ... */
+}
+
+/* for IE 11 and edge */
+.save-disable a {
+	display: inline-block;
+}
+
+.tab-disable {
+	pointer-events: none !important;
+	tab-index: -1;
+}
+.tab-disable li input {
+	color: #777 !important;
+	cursor: default !important;
+}
+.tab-disable li.current input {
+	color: #224 !important;
+}

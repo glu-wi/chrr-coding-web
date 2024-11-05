@@ -1,0 +1,708 @@
+/*
+	See if a variable code equals one of a group of codes. 
+	Created as a convenience function for groupByActions, but anyone is welcome to use it.
+
+	code = fully spec'd variable code -- Dnn.Vnn
+	dcode = current dataset code -- Dnn
+	codeList = comma-separated list of variable codes minus the dataset -- 'V7,V10,V12'
+*/
+function codeEquals(code, dcode, codeList) {
+
+	var codeArr = codeList.split(',');
+	for (var n = 0; n < codeArr.length; n++) {
+		if (code === dcode + '.' + codeArr[n])
+			return true;
+	}
+
+	return false;
+}
+
+/*
+	deletes the named cookie by setting its expriation date in the past
+	statements of the form "document.cookie = ..." create or modify the named cookie only
+	no need to give the cooie's value when deleting it
+*/
+function cookieDelete(name) {
+    document.cookie = name + "=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+}
+
+/*
+	returns the value of the passed in cookie name if it exists
+	var = document.cookie returns all cookies in a string: name1=value1;name2=value2, etc.
+*/
+function cookieValue(name) {
+	var parts = document.cookie.split(name + "=");
+	if (parts.length == 2)
+		return parts.pop().split(";").shift();
+}
+
+function copySavedUrlToClipboard(text) {
+	window.prompt('Press Ctrl+C to copy the url, and then Enter when done.\n', text);
+}
+
+
+var formHasLoaded = false;
+
+function finishLoad() {
+	formHasLoaded = true;
+
+	var elem = document.getElementById('saved-id');
+	if (elem !== null && elem.value !== '')
+		document.getElementById('submit-button1').click();
+}
+
+function optionsHide(stage) {
+	replaceClass('options-form', 'displayon', 'displayoff');
+	replaceClass('hide-opt', 'displayon', 'displayoff');
+	replaceClass('show-opt', 'displayoff', 'displayon');
+
+	stage = optionsStage(stage);
+	document.form['O_' + stage + '_options'].value = 'off';
+}
+
+function optionsShow(stage) {
+	replaceClass('options-form', 'displayoff', 'displayon');
+	replaceClass('hide-opt', 'displayoff', 'displayon');
+	replaceClass('show-opt', 'displayon', 'displayoff');
+
+	stage = optionsStage(stage);
+	document.form['O_' + stage + '_options'].value = 'on';
+}
+
+function optionsHideApi(stage) {
+	replaceClass('options-form-api', 'displayon', 'displayoff');
+	replaceClass('hide-opt-api', 'displayon', 'displayoff');
+	replaceClass('show-opt-api', 'displayoff', 'displayon');
+
+	stage == 'api_form';
+	document.form['O_' + stage + '_options'].value = 'off';
+}
+
+function optionsShowApi(stage) {
+	replaceClass('options-form-api', 'displayoff', 'displayon');
+	replaceClass('hide-opt-api', 'displayoff', 'displayon');
+	replaceClass('show-opt-api', 'displayon', 'displayoff');
+
+	stage == 'api_form';
+	document.form['O_' + stage + '_options'].value = 'on';
+}
+
+/* Translation needed for calls from wonder:rf-heading() */
+function optionsStage(stage) {
+
+	if (stage == 'Change Chart')
+		return 'chart';
+	if (stage == 'Change Map' || stage == 'New Map')
+		return 'map';
+	if (stage == 'Change Table')
+		return 'results_table';
+
+	return stage;
+}
+
+function rangeClear(varCode) {
+
+	var elem = (document.getElementById) ? document.getElementById('R1' + varCode) :
+				((document.all) ? document.all('R1' + varCode) : null);
+	if (elem != null)
+		elem.value = '';
+	elem = (document.getElementById) ? document.getElementById('R2' + varCode) :
+				((document.all) ? document.all('R2' + varCode) : null);
+	if (elem != null)
+		elem.value = '';
+}
+
+function rangeDatesClear(varCode, startDate, endDate) {
+
+	var dateParts = startDate.split('/');
+	rangeDateClear('RD1_Y' + varCode, dateParts[0]);
+	rangeDateClear('RD1_M' + varCode, dateParts[1]);
+	if (dateParts.length == 3)
+		rangeDateClear('RD1_D' + varCode, dateParts[2]);
+
+	dateParts = endDate.split('/');
+	rangeDateClear('RD2_Y' + varCode, dateParts[0]);
+	rangeDateClear('RD2_M' + varCode, dateParts[1]);
+	if (dateParts.length == 3)
+		rangeDateClear('RD2_D' + varCode, dateParts[2]);
+}
+
+function rangeDateClear(id, selValue) {
+
+	var select = (document.getElementById) ? document.getElementById(id) :
+				((document.all) ? document.all(id) : null);
+	if (select != null)
+		setSelectList(select, selValue);
+}
+
+function replaceClass(id, oldclass, newclass) {
+
+	var elem = (document.getElementById) ? document.getElementById(id) :
+				((document.all) ? document.all(id) : null);
+	if (elem == null)
+		return;
+
+	if (elem.className === null || elem.className === "") {
+		elem.className = newclass;
+		return;
+	}
+
+	// doing this instead of using indexOf() and replace() because one of oldclass and newclass
+	// can be a substring of the other, leading to incorrect results
+
+	var update = "";
+	var replaced = false;
+	var classes = elem.className.split(" ");
+
+	for (var n = 0; n < classes.length; n++) {
+		var classname = classes[n];
+		if (classname === oldclass || classname === newclass) {
+			replaced = true;
+			if (classname === oldclass)
+				classname = newclass;
+		}
+		if (update != "")
+			update += " ";
+		update += classname;
+	}
+
+	if (replaced)
+		elem.className = update;
+	else
+		elem.className += " " + newclass;
+}
+
+function saveInfo() {
+	alert('Review the content of this page carefully.'
+		+ '\n\nIf you want to access this page again, save its url:'
+		+ '\n   You can Bookmark the page, or Add it to Favorites.'
+		+ '\n   You can also copy the url from the original message or the'
+		+ '\n   address bar and email it to yourself or a colleague.'
+		+ '\n\nIf you leave this page without bookmarking it, the saved request'
+		+ '\nwill still be available in the WONDER system at this page\'s url.'
+		);
+}
+
+function saveRequest() {
+	// prevents "sending request" message from showing
+	sendTab(); 
+}
+
+/* variables used by the sendMsg, etc functions */
+var progressTimer;
+var tabsend = false;
+var mapchart = '';
+
+function sendCancel() {
+	sendMsgClear();
+	if (window.stop)
+		window.stop();
+	else
+		document.execCommand('Stop');
+}
+
+function sendMsgClear() {
+
+	var elem = (document.getElementById) ? document.getElementById('send-msg') :
+				((document.all) ? document.all('send-msg') : null);
+	if (elem != null)
+		elem.className = 'displayoff';
+
+	if (progressTimer) {
+		window.clearInterval(progressTimer);
+		progressTimer = null;
+	}
+}
+
+function sendMsgInit() {
+	document.write(
+	'<div id="send-msg" class="displayoff">' +
+	'<div id="send-text">Processing Request, please wait for results...</div>' +
+	'<div id="progress-bar" style="width:10px">&nbsp;</div>' +
+	'<div style="width:10px">&nbsp;</div>' +
+	'</div>');
+}
+
+/*
+	Call with action == 'reset' to reset the progress bar, otherwise the progress bar
+	is incremented by 10px.
+*/
+function sendMsgProgressBar(action) {
+
+	// when doing an export, this cookie is sent with the download after the export file is created
+	// when the cookie is seen, delete the cookie and turn off the progress message
+	var cval = cookieValue('cdcwonder_cookie');
+	if (cval == 'wonderexport') {
+		cookieDelete('cdcwonder_cookie');
+		sendMsgClear();
+		return;
+	}
+
+	var elem = (document.getElementById) ? document.getElementById('progress-bar') :
+				((document.all) ? document.all('progress-bar') : null);
+	if (elem == null)
+		return;
+
+	var style = elem.style;
+
+	if (style.width) {
+		var len = style.width.substring(0, style.width.length - 2);
+		len = parseInt(len) + 10;
+		if (len > 300 || action == 'reset')
+			len = 10;
+		style.width = len + 'px';
+	}
+	else {
+		var attrs = style.split(';');
+		var newstyle = '';
+		for (var n = 0; n < attrs.length; n++) {
+			var attr = attrs[n];
+			if (attr == '')
+				continue;
+			if (attr.indexOf('width') == -1 && attr.indexOf('WIDTH') == -1) {
+				newstyle += attr + ';';
+				continue;
+			}
+		
+			var index = attr.indexOf(':');
+			var len = attr.substring(index + 1, attr.length - 2);
+			var num = parseInt(len) + 10;
+			if (num > 300 || action == 'reset')
+				num = 10;
+			len = num + '';
+			newstyle += 'width:' + len + 'px;';
+		}
+
+		elem.setAttribute('style', newstyle);
+	}
+}
+
+function sendMsgSet(flag) {
+
+	if (!formHasLoaded) {
+		alert('The page has not finished loading. Please wait a moment and try again.');
+		return false;
+	}
+
+	/* Tab or finder control clicked, do nothing, set by sendTab() */
+	if (tabsend) {
+		tabsend = false;
+		return true;
+	}
+
+	var stdmsg = 'Processing Request, please wait for results...';
+	var mapmsg = 'Processing Map Request, please wait for results...';
+	var chartmsg = 'Processing Chart Request, please wait for results...';
+	var stillmsg = 'Still Processing, Click "Cancel Request" to stop...';
+	var textnode = sendMsgTextNode();
+
+	/* Another Send already in process */
+	if (progressTimer) {
+		if (textnode == null)
+			return;
+		textnode.nodeValue = stillmsg;
+		window.scrollTo(0,0);
+		return false;
+	}
+	
+	/* hide error message */
+	var errormsg = document.getElementById('error-table');
+	if (errormsg == null)
+		errormsg = document.getElementById('error-messages');
+	if (errormsg != null )
+		errormsg.className = 'displayoff';
+
+	/* Start new data request Send */
+	var elem1 = (document.getElementById) ? document.getElementById('send-msg') :
+				((document.all) ? document.all('send-msg') : null);
+	if (elem1 == null)
+		return true;
+
+	sendMsgProgressBar('reset');
+	if (textnode != null) {
+		if (mapchart != '') {
+			if (mapchart == 'map')
+				textnode.nodeValue = mapmsg;
+			else if (mapchart == 'chart')
+				textnode.nodeValue = chartmsg;
+			mapchart = '';
+		}
+		else if (flag == null)
+			textnode.nodeValue = stdmsg;
+		else if (flag == 'map')
+			textnode.nodeValue = mapmsg;
+		else if (flag == 'chart')
+			textnode.nodeValue = chartmsg;
+	}
+	elem1.className = '';
+
+	window.scrollTo(0,0);
+	progressTimer = window.setInterval(sendMsgProgressBar, 1000);
+
+	return true;
+}
+
+function sendMsgTextNode() {
+	var elem = (document.getElementById) ? document.getElementById('send-text') :
+				((document.all) ? document.all('send-text') : null);
+	if (elem == null)
+		return null;
+	return elem.childNodes[0];
+}
+
+/*
+	Called by the onclick handler of tabs so the sendMsgSet function knows a tab was clicked
+*/
+function sendTab() {
+	tabsend = true;
+}
+
+function sendTab2(mapchartStr) {
+	mapchart = mapchartStr;
+}
+
+function setfocus(win_name) {
+
+	var win = window.open('', win_name);
+
+	var width = (window.screen.availWidth * .9);
+	var height = (window.screen.availHeight * .9);
+	win.resizeTo(width, height);
+
+	var x_pos = (window.screen.availWidth/2) - (width / 2);
+	var y_pos = (window.screen.availHeight/2) - (height / 2);
+	win.moveTo(x_pos, y_pos);
+
+	win.focus();
+}
+
+/*
+	Change selection in a single select list box to 'selValue'
+*/
+function setSelectList(select, selValue) {
+
+	var selIndex = -1;
+	var options = select.options;
+	for (var n = 0; n < options.length; n++) {
+		var option = options[n];
+		if (option.value == selValue) {
+			selIndex = n;
+			break;
+		}
+	}
+
+	if (selIndex > -1)
+		select.selectedIndex = selIndex;
+}
+
+/*
+	create a link for posting a saved request/etc to social media
+	anchor is for the icon we click, facebook, etc
+	target is the social system for the icon: 'facebook', 'twitter', 'linkedin', 'email', and 'digg' are supported
+	url is the saved request/etc url
+	note that we're using this method to set the <a> href to addthis.com because setting it directly causes the external website icons
+*/
+function socialLink(anchor, target, url, datasetLabel) {
+	var href = 'http://api.addthis.com/oexchange/0.8/forward/' + target + '/offer?url=' + url + '&title=CDC WONDER&description=A saved query for this online database: ' + datasetLabel + '.&via=CDCgov&ct=0&media=';
+	anchor.href = href;
+}
+
+var submitButton = '';
+function submitGet() {
+	return submitButton;
+}
+
+function submitSet(button) {
+	submitButton = button.name;
+}
+
+/*	
+	BUG NOTE:
+	toggleBys() is used, via toggleOptions(), by radio buttons to change the selected by-variable in the Group By list.
+	This is done because a radio button is selected that represents a by-variable that is mutually exclusive of 
+	another by-varaible already selected in the listbox, e.g. two different age groups or state and msa.
+
+	The manipulation of the list boxes and radio buttons is normally done by using the variable code e.g D42.V2, 
+	for the radio button which is what is used in the group by list box.
+
+	However, this link can be broken when the value on the radio button doesn't match the values for the options 
+	in the list box. The result is that user can change radio button but not change selected by-variable in the 
+	Group By list box. This feature has been used on radio buttons for variables which are not mutually exclusive, 
+	e.g. state and regions.
+
+	Actually this "feature" is normally created accidently when using radio buttons for finders. The .xsl code 
+	automatically appends the level to the value used in the Group By listbox, e.g. D45.V2-level1. The programmer 
+	has forgotten to use the level in the values for the radio button when creating his .xsl file.
+
+	There is a problem although when one but not all the value for the radio buttons and options in the listbox match.  
+	You end up with mixed behavior. Changing the radio buttons affects some selected by-variables in the Group By 
+	listbox and others it does not affect. To make things more confusing the result is that normally the Group By 
+	list box gets reset to the default value instead of the by-variable represented by the selected radio button.
+
+	BUG FIX:
+	If you ever get the mixed behavior, and don't want the link between the radio buttons and the Group By listbox, 
+	then you can basically negate the code which causes the problem in the toggleBys() function by putting a blank 
+	version of toggleBys() in your .xsl file. See std.xsl for example.
+
+*/
+function toggleBys(byselect, on, offList) {
+
+	var offarr = offList.split(',');
+	var found = false;
+	var options = byselect.options;
+	for (var n = 0; n < options.length; n++) {
+		var option = options[n];
+		if (!option.selected)
+			continue;
+		var value = option.value;
+		for (var m = 0; m < offarr.length; m++) {
+			if (value == offarr[m]) {
+				found = true;
+				option.selected = false;
+			}
+		}
+	}
+
+	if (!found)
+		return;
+
+	for (var n = 0; n < options.length; n++) {
+		var option = options[n];
+		var value = option.value;
+		if (on == value) {
+			option.selected = true;
+		}
+	}
+}
+
+function toggleDisplay(on, offList) {
+
+	toggleDisplayLocal(on, offList)
+	replaceClass(on, 'displayoff', 'displayon');
+
+	var offarr = offList.split(',');
+	// as times offList is really the complete list, including 'on'
+	// don't turn 'on' off...
+	for (var n = 0; n < offarr.length; n++) {
+		if (on == offarr[n])
+			continue;
+		replaceClass(offarr[n], 'displayon', 'displayoff');
+	}
+}
+
+// Placeholder. Will be overridden by datasets in the xsl request file as needed.
+function toggleDisplayLocal(on, offList) {
+}
+
+/* 	BUG NOTE:
+	see notes for toggleBys() above.
+
+	in some cases user interface needs only to change display of controls in responce to change in radio buttons without this change
+	getting reflected in the group by list.  the call to togglebys() is what reflects changes in group by list.
+	new third parameter, doToggleBys, allows for call to toggleBys function to be optional.
+*/
+/*
+	toggleOptions changes the display on the form in response to a radio button selection.
+	call to toggleBys, which is optional, changes display in group by list to keep in sync with radio button selection.
+	
+*/
+function toggleOptions(on, offList, doToggleBys) {
+
+	toggleDisplay(on, offList);
+	// loop through byvariables and toggle based on settings
+	// look until no more found
+	if (doToggleBys) {
+		for (var n = 1; n < 11; n++) {
+			var byselect = document.form["B_" + n];
+			if (byselect == undefined)
+				break;
+			toggleBys(byselect, on, offList);
+		}
+	}
+	loadFinder(on);
+}
+
+function toggleRadio(name, value) {
+
+	var radios = document.getElementsByName(name);
+	for (var n = 0; n < radios.length; n++)
+		radios[n].checked = (radios[n].value == value) ? true : false;
+}
+
+/* returns id of checked demographic radio button*/
+function getCheckedRadio(name) {
+
+	var radios = document.getElementsByName(name);
+	for (var n = 0; n < radios.length; n++)
+		if (radios[n].checked == true)
+			return radios[n].value;
+}
+
+function togglePageBreaks(checked, tagname) {
+
+	var classname = checked ? "pagebreak" : "pagebreakoff";
+	var divs = document.getElementsByTagName(tagname);
+	for (var n = 0; n < divs.length; n++) {
+		var cl = divs[n].className;
+		if (cl.indexOf("pagebreak") == 0)
+			divs[n].className = classname;
+	}
+}
+
+
+/*
+	function stopRKey captures all keystrokes on the page and eats the enter keystroke.
+	however, tabbing to a button and hitting enter still works.
+	this keeps the form from getting submitted, or a navigation tab from being activated when
+	user hits the enter key in a single line edit box.
+*/
+
+function stopRKey(evt) {
+  var evt = (evt) ? evt : ((event) ? event : null);
+  var node = (evt.target) ? evt.target : ((evt.srcElement) ? evt.srcElement : null);
+  if (evt.keyCode == 13) 
+  {
+	  if (node.type=="button") {return true;}
+	  else if ((node.type=="text") && (node.id!="headerSearch")) {return false;}
+		else {return true;}
+  }
+  else {return true;}
+} 
+
+document.onkeypress = stopRKey; 
+
+
+
+/*
+	new functions for nasa
+*/
+function toggleDisplayMany(onList, offList) {
+
+	toggleDisplayLocal(onList, offList)
+
+	//turn off everything first
+	var offarr = offList.split(',');
+	// at times offList is really the complete list, including 'on'
+	// don't turn 'on' off...
+	for (var n = 0; n < offarr.length; n++) {
+		replaceClass(offarr[n], 'displayon', 'displayoff');
+	}
+
+	//now turn on correct ones
+	var onarr = onList.split(',');
+	// at times offList is really the complete list, including 'off'
+	// don't turn 'off' on...
+	for (var n = 0; n < onarr.length; n++) {
+		replaceClass(onarr[n], 'displayoff', 'displayon');
+	}
+
+	// this is hack for nasa dataset.
+	// check to see if all these exist so this function is safe for other datasets to use
+	var o_max = document.getElementById('O_max');
+	var o_min = document.getElementById('O_min');
+	var o_hi = document.getElementById('O_hi');
+	var o_dataset_id = document.getElementById('dataset_id');
+	if (o_max != null && o_min != null && o_hi != null && o_dataset_id != null) {
+		if (onList.indexOf('C') > -1) {
+			o_max.value=o_dataset_id.value + '.V11';
+			o_min.value=o_dataset_id.value + '.V13';
+			o_hi.value=o_dataset_id.value + '.V15';
+		}
+		else {
+			o_max.value=o_dataset_id.value + '.V10';
+			o_min.value=o_dataset_id.value + '.V12';
+			o_hi.value=o_dataset_id.value + '.V14';
+		}
+	}
+}
+
+/* 	BUG NOTE:
+	see notes for toggleBys() above.
+
+	in some cases user interface needs only to change display of controls in responce to change in radio buttons without this change
+	getting reflected in the group by list.  the call to togglebys() is what reflects changes in group by list.
+	new third parameter, doToggleBys, allows for call to toggleBys function to be optional.
+*/
+function toggleOptionsMany(onList, offList, doToggleBys) {
+
+	toggleDisplayMany(onList, offList);
+	// loop through byvariables and toggle based on settings
+	// look until no more found
+	if (doToggleBys) {
+		for (var n = 1; n < 11; n++) {
+			var byselect = document.form["B_" + n];
+			if (byselect == undefined)
+				break;
+			toggleBys(byselect, on, offList);
+		}
+	}
+//	loadFinder(on);
+}
+
+function toggleSubordinates(id, subidList) {
+
+	var parent = (document.getElementById) ? document.getElementById(id) :
+				((document.all) ? document.all(id) : null);
+	if (parent != null) {
+
+		var arr = subidList.split(',');
+		for (var n = 0; n < arr.length; n++) {
+			if (parent.checked == true) {
+				// enable the input
+				var elem = (document.getElementById) ? document.getElementById(arr[n]) :
+							((document.all) ? document.all(arr[n]) : null);
+				if (elem != null) {
+					elem.disabled = false;
+				
+					// disable the input label if it exist
+					var label_elem = (document.getElementById) ? document.getElementById(arr[n] + '_label') :
+								((document.all) ? document.all(arr[n] + '_label') : null);
+					if (label_elem != null) {
+						replaceClass(arr[n] + '_label', 'disabled', 'enabled');
+					}
+				}
+			}
+			else {
+				// disable the input
+				var elem = (document.getElementById) ? document.getElementById(arr[n]) :
+							((document.all) ? document.all(arr[n]) : null);
+				if (elem != null) {
+					elem.disabled = true;
+					elem.checked = false;
+
+					// disable the input label if it exist
+					var label_elem = (document.getElementById) ? document.getElementById(arr[n] + '_label') :
+								((document.all) ? document.all(arr[n] + '_label') : null);
+					if (label_elem != null) {
+						replaceClass(arr[n] + '_label', 'enabled', 'disabled');
+					}
+				}
+			}
+		}
+	}
+	return;
+}
+
+function vaersButtonsEnable() {
+
+	var elem = document.getElementById('vaers-buttons1');
+	if (elem != null) {
+		elem.className = 'displayoff';
+	}
+
+	elem = document.getElementById('vaers-buttons2');
+	if (elem != null) {
+		elem.className = 'displayon';
+	}
+}
+
+function vaersShowDisclaimer() {
+	var modal = document.getElementById("vaersModal");
+	modal.style.display = "block";
+}
+
+function vaersDisclaimer() {
+	var modal = document.getElementById("vaersModal");
+	modal.style.display = "none";
+}
+
