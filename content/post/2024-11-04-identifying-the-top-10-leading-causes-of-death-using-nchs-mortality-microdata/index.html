@@ -1,0 +1,1308 @@
+---
+title: Identifying the Top 10 Leading Causes of Death Using NCHS Mortality Microdata
+author: GL
+date: '2024-11-08'
+slug: identifying-the-top-10-leading-causes-of-death-using-nchs-mortality-microdata
+categories:
+  - R
+  - Python
+tags:
+  - R
+  - Python
+output:
+  blogdown::html_page:
+    toc: true  
+---
+
+<link href="{{< blogdown/postref >}}index_files/htmltools-fill/fill.css" rel="stylesheet" />
+<script src="{{< blogdown/postref >}}index_files/htmlwidgets/htmlwidgets.js"></script>
+<link href="{{< blogdown/postref >}}index_files/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
+<script src="{{< blogdown/postref >}}index_files/datatables-binding/datatables.js"></script>
+<script src="{{< blogdown/postref >}}index_files/jquery/jquery-3.6.0.min.js"></script>
+<link href="{{< blogdown/postref >}}index_files/dt-core/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="{{< blogdown/postref >}}index_files/dt-core/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="{{< blogdown/postref >}}index_files/dt-core/js/jquery.dataTables.min.js"></script>
+<link href="{{< blogdown/postref >}}index_files/crosstalk/css/crosstalk.min.css" rel="stylesheet" />
+<script src="{{< blogdown/postref >}}index_files/crosstalk/js/crosstalk.min.js"></script>
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#setting-up-the-analysis" id="toc-setting-up-the-analysis">Setting Up the Analysis</a></li>
+<li><a href="#identifying-the-top-10-causes-of-death" id="toc-identifying-the-top-10-causes-of-death">Identifying the Top 10 Causes of Death</a>
+<ul>
+<li><a href="#r" id="toc-r">R</a>
+<ul>
+<li><a href="#import-packages" id="toc-import-packages">Import packages</a></li>
+<li><a href="#define-a-header-dataframe-for-reading-fixed-width-files" id="toc-define-a-header-dataframe-for-reading-fixed-width-files">Define a header dataframe for reading fixed-width files</a></li>
+<li><a href="#mortality-data" id="toc-mortality-data">2022 mortality data</a></li>
+<li><a href="#crosswalk-between-icd-10-and-rankable-causes-from-cdc-wonder" id="toc-crosswalk-between-icd-10-and-rankable-causes-from-cdc-wonder">Crosswalk between ICD-10 and rankable causes (from CDC WONDER)</a></li>
+<li><a href="#top-10-leading-causes-of-death" id="toc-top-10-leading-causes-of-death">Top 10 Leading Causes of Death</a></li>
+<li><a href="#comparison-with-cdc-data" id="toc-comparison-with-cdc-data">Comparison with CDC Data</a></li>
+</ul></li>
+<li><a href="#python" id="toc-python">Python</a>
+<ul>
+<li><a href="#import-packages-1" id="toc-import-packages-1">Import packages</a></li>
+<li><a href="#import-data" id="toc-import-data">Import data</a></li>
+<li><a href="#process-data" id="toc-process-data">Process data</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#summary" id="toc-summary">Summary</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Understanding the leading causes of death is crucial for guiding public health efforts and shaping effective policies. By identifying the conditions that contribute most significantly to mortality, public health officials can prioritize resources, design targeted interventions, and address the specific health needs of different populations. For instance, recognizing that heart disease and cancer are among the top causes of death in many countries drives initiatives focused on preventive care, early screening, and health education to reduce risk factors associated with these conditions. Analyzing leading causes of death also helps policymakers track trends over time, identify emerging health threats, and assess the effectiveness of existing health programs.</p>
+<p>The NCHS Mortality Microdata, available at <a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm">NCHS Vital Statistics Online</a>, is a comprehensive dataset collected and maintained by the National Center for Health Statistics (NCHS). This dataset contains detailed, anonymized information on all recorded deaths in the United States, which allows researchers to study mortality trends and patterns across various demographic and geographic factors. Each death record includes an ICD-10 code that identifies the underlying cause of death. The dataset also provides demographic information about each deceased individual, including age, sex, race, and ethnicity, which enables analyses of mortality trends across different population groups. NCHS mortality data is collected annually, making it a valuable resource for analyzing trends over time.</p>
+<p>This post builds upon a <a href="https://chrr-coding-discussions.netlify.app/2024/11/04/understanding-icd-10-codes-and-the-113-causes-of-death-in-cdc-wonder/">previous post</a>, in which we created a crosswalk between ICD-10 codes and the rankable causes of death defined by the CDC. In that post, we developed a mapping that links specific ICD-10 codes to broader cause-of-death categories, simplifying the classification of mortality data for analysis. This crosswalk is helpful for working with NCHS mortality microdata in this post, as it allows us to group detailed ICD-10-coded death records into the recognized causes of death categories. In this post, we will use the crosswalk to process NCHS microdata, linking each individual ICD-10-coded cause of death to its corresponding rankable category. This approach enables us to compile and rank causes of death and identify the top 10 leading causes of death in the United States.</p>
+</div>
+<div id="setting-up-the-analysis" class="section level1">
+<h1>Setting Up the Analysis</h1>
+<p>We will us the 2022 NCHS mortality microdata, which can be downloaded from this <a href="https://www.cdc.gov/nchs/data_access/vitalstatsonline.htm">NCHS website</a>. A screenshot of the website is shown below, in which the 2022 file <code>2022 (161MB)</code> is highlighted in yellow. It is also important to read the documentation about the data, which can be accessed by clicking on <code>1968-2022</code> under <code>User's Guide (.pdf files)</code>. Or, you can go to <code>2022 Documentation</code> following this <a href="https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/mortality/2022-Mortality-Public-Use-File-Documentation.pdf">link</a>.</p>
+<p><img src="images/nchs_mortality_data_list.PNG" width="95%" /></p>
+<p>After downloading the 161-MB zipped file, we just need to unzip it and put the unzipped file (<code>VS22MORT.DUSMCPUB_r20240307</code>, ~2.5 GB) in a folder that is convenient to access.</p>
+<p>Since the microdata we are using is publicly available, certain geographic details—such as state, county, or major city of residence—are omitted to preserve confidentiality. This means fields like state and county of residence have been removed in the downloaded file. But the data still contains sufficient detail to support analysis at the national level.</p>
+<p>NCHS mortality microdata is in <code>fixed-width-file</code> format, where each field (or column) has a designated width for consistent data alignment. For more information on reading and processing these files, refer to our <a href="https://chrr-coding-discussions.netlify.app/2024/03/18/reading-fixed-width-files-in-sas-r-and-python/">previous post</a> that discusses how to read and process these files, which covers methods for handling fixed-width data formats effectively.</p>
+<p>We will need two fields in the mortality data for analyzing causes of death:</p>
+<ul>
+<li><p><code>Resident Status</code>: field location = 20, field size = 1 (i.e., this field is 1-character wide). This field can have values 1, 2, 3, or 4; the value 4 corresponds to ‘FOREIGN RESIDENTS’, which we need to exclude in our analysis.</p></li>
+<li><p><code>ICD Code</code>: field location = 146-149, field size = 4 (i.e., this field is 4-character wide). This field is for ICD-10 codes.</p></li>
+</ul>
+<p>More information about fields is avaiable in <a href="https://ftp.cdc.gov/pub/Health_Statistics/NCHS/Dataset_Documentation/DVS/mortality/2022-Mortality-Public-Use-File-Documentation.pdf">2022 Documentation</a>.</p>
+</div>
+<div id="identifying-the-top-10-causes-of-death" class="section level1">
+<h1>Identifying the Top 10 Causes of Death</h1>
+<p>We will use both R and Python to get the 2022 top 10 leading causes of death in U.S. from the microdata. The processing steps are pretty much the same, except that the syntaxes are different.</p>
+<div id="r" class="section level2">
+<h2>R</h2>
+<div id="import-packages" class="section level3">
+<h3>Import packages</h3>
+<pre class="r"><code>library(tidyverse)
+library(gt)</code></pre>
+</div>
+<div id="define-a-header-dataframe-for-reading-fixed-width-files" class="section level3">
+<h3>Define a header dataframe for reading fixed-width files</h3>
+<p>For convenience, let’s store the name, start position, and end position for each field in a dataframe named <code>mort_header</code>. This dataframe will be helpful when we read the mortality data.</p>
+<pre class="r"><code>mort_header &lt;- tribble(
+  ~fld_name, ~start,  ~end,
+  &quot;resident_status&quot;, 20, 20,
+  &quot;icd_code&quot;, 146, 149
+)
+
+mort_header</code></pre>
+<pre><code>## # A tibble: 2 × 3
+##   fld_name        start   end
+##   &lt;chr&gt;           &lt;dbl&gt; &lt;dbl&gt;
+## 1 resident_status    20    20
+## 2 icd_code          146   149</code></pre>
+</div>
+<div id="mortality-data" class="section level3">
+<h3>2022 mortality data</h3>
+<p>We use the <code>read_fwf()</code> function to read in the mortality data <code>VS22MORT.DUSMCPUB_r20240307</code>. We also add a step to filter out rows for foreign residents by setting <code>resident_status != 4</code>.</p>
+<pre class="r"><code>mort_2022 &lt;- read_fwf(
+  file = &quot;data/VS22MORT.DUSMCPUB_r20240307&quot; ,
+  n_max = Inf, guess_max = 100000,
+  col_positions = fwf_positions(
+    start = mort_header$start,
+    end = mort_header$end,
+    col_names = mort_header$fld_name
+    ),
+  show_col_types = FALSE
+  ) %&gt;% 
+  # remove foreign residents
+  filter(resident_status != 4) %&gt;% 
+  glimpse()</code></pre>
+<pre><code>## Rows: 3,279,857
+## Columns: 2
+## $ resident_status &lt;dbl&gt; 1, 1, 2, 1, 1, 1, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, …
+## $ icd_code        &lt;chr&gt; &quot;C349&quot;, &quot;C220&quot;, &quot;I251&quot;, &quot;C64&quot;, &quot;U071&quot;, &quot;J123&quot;, &quot;J101&quot;,…</code></pre>
+<pre class="r"><code>mort_2022 %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 × 2
+##   resident_status icd_code
+##             &lt;dbl&gt; &lt;chr&gt;   
+## 1               1 C349    
+## 2               1 C220    
+## 3               2 I251    
+## 4               1 C64     
+## 5               1 U071    
+## 6               1 J123</code></pre>
+<p>The mortality dataframe <code>mort_2022</code> has over 3 million rows, more precisely 3279857 rows.</p>
+</div>
+<div id="crosswalk-between-icd-10-and-rankable-causes-from-cdc-wonder" class="section level3">
+<h3>Crosswalk between ICD-10 and rankable causes (from CDC WONDER)</h3>
+<p>As we mentioned in the introduction, we will need the crosswalk between ICD-10 and rankable causes, which was created in a <a href="https://chrr-coding-discussions.netlify.app/2024/11/04/understanding-icd-10-codes-and-the-113-causes-of-death-in-cdc-wonder/">previous post</a>. This crosswalk will help us map the ICD-10 codes to rankable causes.</p>
+<p>Most of the ICD-10 codes in the crosswalk are 3-character long (such as <code>A01</code>), each of which is actually for a group of ICD-10 codes. But there are some special cases in the crosswalk: 10 ICD-10 codes that have two more characters, such as <code>A85.2</code>.</p>
+<div id="bfgylqbsoc" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#bfgylqbsoc table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#bfgylqbsoc thead, #bfgylqbsoc tbody, #bfgylqbsoc tfoot, #bfgylqbsoc tr, #bfgylqbsoc td, #bfgylqbsoc th {
+  border-style: none;
+}
+
+#bfgylqbsoc p {
+  margin: 0;
+  padding: 0;
+}
+
+#bfgylqbsoc .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#bfgylqbsoc .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#bfgylqbsoc .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#bfgylqbsoc .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#bfgylqbsoc .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#bfgylqbsoc .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#bfgylqbsoc .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#bfgylqbsoc .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#bfgylqbsoc .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#bfgylqbsoc .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#bfgylqbsoc .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#bfgylqbsoc .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#bfgylqbsoc .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#bfgylqbsoc .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#bfgylqbsoc .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#bfgylqbsoc .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#bfgylqbsoc .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#bfgylqbsoc .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#bfgylqbsoc .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#bfgylqbsoc .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#bfgylqbsoc .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#bfgylqbsoc .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#bfgylqbsoc .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#bfgylqbsoc .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#bfgylqbsoc .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#bfgylqbsoc .gt_left {
+  text-align: left;
+}
+
+#bfgylqbsoc .gt_center {
+  text-align: center;
+}
+
+#bfgylqbsoc .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#bfgylqbsoc .gt_font_normal {
+  font-weight: normal;
+}
+
+#bfgylqbsoc .gt_font_bold {
+  font-weight: bold;
+}
+
+#bfgylqbsoc .gt_font_italic {
+  font-style: italic;
+}
+
+#bfgylqbsoc .gt_super {
+  font-size: 65%;
+}
+
+#bfgylqbsoc .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#bfgylqbsoc .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#bfgylqbsoc .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#bfgylqbsoc .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#bfgylqbsoc .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#bfgylqbsoc .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#bfgylqbsoc .gt_indent_5 {
+  text-indent: 25px;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="icd_code">icd_code</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="cause">cause</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="cause_id">cause_id</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="icd_code" class="gt_row gt_left">A85.2</td>
+<td headers="cause" class="gt_row gt_left">Arthropod-borne viral encephalitis</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-013</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">U07.0</td>
+<td headers="cause" class="gt_row gt_left">Pneumoconioses and chemical effects</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-087</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">N13.6</td>
+<td headers="cause" class="gt_row gt_left">Infections of kidney</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-102</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">N15.1</td>
+<td headers="cause" class="gt_row gt_left">Infections of kidney</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-102</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">Y87.0</td>
+<td headers="cause" class="gt_row gt_left">Intentional self-harm (suicide)</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-124</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">Y87.1</td>
+<td headers="cause" class="gt_row gt_left">Assault (homicide)</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-127</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">Y89.0</td>
+<td headers="cause" class="gt_row gt_left">Legal intervention</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-130</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">Y89.1</td>
+<td headers="cause" class="gt_row gt_left">Operations of war and their sequelae</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-134</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">A04.7</td>
+<td headers="cause" class="gt_row gt_left">Enterocolitis due to Clostridium difficile</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-136</td></tr>
+    <tr><td headers="icd_code" class="gt_row gt_left">U07.1</td>
+<td headers="cause" class="gt_row gt_left">COVID-19</td>
+<td headers="cause_id" class="gt_row gt_left">GR113-137</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
+<p>Also, in the mortality data, the dots in the ICD-10 codes are not used. We will remove the dots in ICD-10 codes in the crosswalk dataframe and also create two columns to tract these two types of ICD-10 codes, i.e., 3-char ICD and 4-char ICD.</p>
+<pre class="r"><code>crosswalk_icd10_vs_causes &lt;- read_csv(&quot;data/crosswalk_icd10_vs_causes.csv&quot;, show_col_types = FALSE)  %&gt;% 
+  select(icd_code = icd10, cause, cause_id) %&gt;% 
+  # remove the dot in some ICD-10 codes
+  mutate(icd_code = str_replace(icd_code, &quot;\\.&quot;, &quot;&quot;)) %&gt;% 
+  mutate(icd_3char = if_else(str_length(icd_code)==3, icd_code, NA),
+         icd_4char = if_else(str_length(icd_code)==4, icd_code, NA) ,
+         .before = 2) %&gt;% 
+  glimpse()</code></pre>
+<pre><code>## Rows: 1,037
+## Columns: 5
+## $ icd_code  &lt;chr&gt; &quot;A01&quot;, &quot;A02&quot;, &quot;A03&quot;, &quot;A06&quot;, &quot;A16&quot;, &quot;A17&quot;, &quot;A18&quot;, &quot;A19&quot;, &quot;A37…
+## $ icd_3char &lt;chr&gt; &quot;A01&quot;, &quot;A02&quot;, &quot;A03&quot;, &quot;A06&quot;, &quot;A16&quot;, &quot;A17&quot;, &quot;A18&quot;, &quot;A19&quot;, &quot;A37…
+## $ icd_4char &lt;chr&gt; NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+## $ cause     &lt;chr&gt; &quot;Salmonella infections&quot;, &quot;Salmonella infections&quot;, &quot;Shigellos…
+## $ cause_id  &lt;chr&gt; &quot;GR113-001&quot;, &quot;GR113-001&quot;, &quot;GR113-002&quot;, &quot;GR113-002&quot;, &quot;GR113-0…</code></pre>
+<pre class="r"><code>crosswalk_icd10_vs_causes %&gt;% 
+  DT::datatable()</code></pre>
+<div class="datatables html-widget html-fill-item" id="htmlwidget-1" style="width:100%;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"filter":"none","vertical":false,"data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51","52","53","54","55","56","57","58","59","60","61","62","63","64","65","66","67","68","69","70","71","72","73","74","75","76","77","78","79","80","81","82","83","84","85","86","87","88","89","90","91","92","93","94","95","96","97","98","99","100","101","102","103","104","105","106","107","108","109","110","111","112","113","114","115","116","117","118","119","120","121","122","123","124","125","126","127","128","129","130","131","132","133","134","135","136","137","138","139","140","141","142","143","144","145","146","147","148","149","150","151","152","153","154","155","156","157","158","159","160","161","162","163","164","165","166","167","168","169","170","171","172","173","174","175","176","177","178","179","180","181","182","183","184","185","186","187","188","189","190","191","192","193","194","195","196","197","198","199","200","201","202","203","204","205","206","207","208","209","210","211","212","213","214","215","216","217","218","219","220","221","222","223","224","225","226","227","228","229","230","231","232","233","234","235","236","237","238","239","240","241","242","243","244","245","246","247","248","249","250","251","252","253","254","255","256","257","258","259","260","261","262","263","264","265","266","267","268","269","270","271","272","273","274","275","276","277","278","279","280","281","282","283","284","285","286","287","288","289","290","291","292","293","294","295","296","297","298","299","300","301","302","303","304","305","306","307","308","309","310","311","312","313","314","315","316","317","318","319","320","321","322","323","324","325","326","327","328","329","330","331","332","333","334","335","336","337","338","339","340","341","342","343","344","345","346","347","348","349","350","351","352","353","354","355","356","357","358","359","360","361","362","363","364","365","366","367","368","369","370","371","372","373","374","375","376","377","378","379","380","381","382","383","384","385","386","387","388","389","390","391","392","393","394","395","396","397","398","399","400","401","402","403","404","405","406","407","408","409","410","411","412","413","414","415","416","417","418","419","420","421","422","423","424","425","426","427","428","429","430","431","432","433","434","435","436","437","438","439","440","441","442","443","444","445","446","447","448","449","450","451","452","453","454","455","456","457","458","459","460","461","462","463","464","465","466","467","468","469","470","471","472","473","474","475","476","477","478","479","480","481","482","483","484","485","486","487","488","489","490","491","492","493","494","495","496","497","498","499","500","501","502","503","504","505","506","507","508","509","510","511","512","513","514","515","516","517","518","519","520","521","522","523","524","525","526","527","528","529","530","531","532","533","534","535","536","537","538","539","540","541","542","543","544","545","546","547","548","549","550","551","552","553","554","555","556","557","558","559","560","561","562","563","564","565","566","567","568","569","570","571","572","573","574","575","576","577","578","579","580","581","582","583","584","585","586","587","588","589","590","591","592","593","594","595","596","597","598","599","600","601","602","603","604","605","606","607","608","609","610","611","612","613","614","615","616","617","618","619","620","621","622","623","624","625","626","627","628","629","630","631","632","633","634","635","636","637","638","639","640","641","642","643","644","645","646","647","648","649","650","651","652","653","654","655","656","657","658","659","660","661","662","663","664","665","666","667","668","669","670","671","672","673","674","675","676","677","678","679","680","681","682","683","684","685","686","687","688","689","690","691","692","693","694","695","696","697","698","699","700","701","702","703","704","705","706","707","708","709","710","711","712","713","714","715","716","717","718","719","720","721","722","723","724","725","726","727","728","729","730","731","732","733","734","735","736","737","738","739","740","741","742","743","744","745","746","747","748","749","750","751","752","753","754","755","756","757","758","759","760","761","762","763","764","765","766","767","768","769","770","771","772","773","774","775","776","777","778","779","780","781","782","783","784","785","786","787","788","789","790","791","792","793","794","795","796","797","798","799","800","801","802","803","804","805","806","807","808","809","810","811","812","813","814","815","816","817","818","819","820","821","822","823","824","825","826","827","828","829","830","831","832","833","834","835","836","837","838","839","840","841","842","843","844","845","846","847","848","849","850","851","852","853","854","855","856","857","858","859","860","861","862","863","864","865","866","867","868","869","870","871","872","873","874","875","876","877","878","879","880","881","882","883","884","885","886","887","888","889","890","891","892","893","894","895","896","897","898","899","900","901","902","903","904","905","906","907","908","909","910","911","912","913","914","915","916","917","918","919","920","921","922","923","924","925","926","927","928","929","930","931","932","933","934","935","936","937","938","939","940","941","942","943","944","945","946","947","948","949","950","951","952","953","954","955","956","957","958","959","960","961","962","963","964","965","966","967","968","969","970","971","972","973","974","975","976","977","978","979","980","981","982","983","984","985","986","987","988","989","990","991","992","993","994","995","996","997","998","999","1000","1001","1002","1003","1004","1005","1006","1007","1008","1009","1010","1011","1012","1013","1014","1015","1016","1017","1018","1019","1020","1021","1022","1023","1024","1025","1026","1027","1028","1029","1030","1031","1032","1033","1034","1035","1036","1037"],["A01","A02","A03","A06","A16","A17","A18","A19","A37","A38","A46","A39","A40","A41","A50","A51","A52","A53","A80","A83","A84","A852","B05","B15","B16","B17","B18","B19","B20","B21","B22","B23","B24","B50","B51","B52","B53","B54","C00","C01","C02","C03","C04","C05","C06","C07","C08","C09","C10","C11","C12","C13","C14","C15","C16","C17","C18","C19","C20","C21","C22","C23","C24","C25","C26","C27","C28","C29","C30","C31","C32","C33","C34","C35","C36","C37","C38","C39","C40","C41","C42","C43","C44","C45","C46","C47","C48","C49","C50","C51","C52","C53","C54","C55","C56","C57","C58","C59","C60","C61","C62","C63","C64","C65","C66","C67","C68","C69","C70","C71","C72","C73","C74","C75","C76","C77","C78","C79","C80","C81","C82","C83","C84","C85","C86","C87","C88","C89","C90","C91","C92","C93","C94","C95","C96","C97","D00","D01","D02","D03","D04","D05","D06","D07","D08","D09","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","D32","D33","D34","D35","D36","D37","D38","D39","D40","D41","D42","D43","D44","D45","D46","D47","D48","D50","D51","D52","D53","D54","D55","D56","D57","D58","D59","D60","D61","D62","D63","D64","E10","E11","E12","E13","E14","E40","E41","E42","E43","E44","E45","E46","E47","E48","E49","E50","E51","E52","E53","E54","E55","E56","E57","E58","E59","E60","E61","E62","E63","E64","G00","G03","G20","G21","G30","I00","I01","I02","I03","I04","I05","I06","I07","I08","I09","I11","I13","I20","I21","I22","I23","I24","I25","I26","I27","I28","I29","I30","I31","I32","I33","I34","I35","I36","I37","I38","I39","I40","I41","I42","I43","I44","I45","I46","I47","I48","I49","I50","I51","I10","I12","I15","I60","I61","I62","I63","I64","I65","I66","I67","I68","I69","I70","I71","J09","J10","J11","J12","J13","J14","J15","J16","J17","J18","J20","J21","J40","J41","J42","J43","J44","J45","J46","J47","J60","J61","J62","J63","J64","J65","J66","J68","U070","J69","K25","K26","K27","K28","K35","K36","K37","K38","K40","K41","K42","K43","K44","K45","K46","K70","K73","K74","K80","K81","K82","N00","N01","N02","N03","N04","N05","N06","N07","N17","N18","N19","N25","N26","N27","N10","N11","N12","N136","N151","N40","N70","N71","N72","N73","N74","N75","N76","O00","O01","O02","O03","O04","O05","O06","O07","O08","O09","O10","O11","O12","O13","O14","O15","O16","O17","O18","O19","O20","O21","O22","O23","O24","O25","O26","O27","O28","O29","O30","O31","O32","O33","O34","O35","O36","O37","O38","O39","O40","O41","O42","O43","O44","O45","O46","O47","O48","O49","O50","O51","O52","O53","O54","O55","O56","O57","O58","O59","O60","O61","O62","O63","O64","O65","O66","O67","O68","O69","O70","O71","O72","O73","O74","O75","O76","O77","O78","O79","O80","O81","O82","O83","O84","O85","O86","O87","O88","O89","O90","O91","O92","O93","O94","O95","O96","O97","O98","O99","P00","P01","P02","P03","P04","P05","P06","P07","P08","P09","P10","P11","P12","P13","P14","P15","P16","P17","P18","P19","P20","P21","P22","P23","P24","P25","P26","P27","P28","P29","P30","P31","P32","P33","P34","P35","P36","P37","P38","P39","P40","P41","P42","P43","P44","P45","P46","P47","P48","P49","P50","P51","P52","P53","P54","P55","P56","P57","P58","P59","P60","P61","P62","P63","P64","P65","P66","P67","P68","P69","P70","P71","P72","P73","P74","P75","P76","P77","P78","P79","P80","P81","P82","P83","P84","P85","P86","P87","P88","P89","P90","P91","P92","P93","P94","P95","P96","Q00","Q01","Q02","Q03","Q04","Q05","Q06","Q07","Q08","Q09","Q10","Q11","Q12","Q13","Q14","Q15","Q16","Q17","Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25","Q26","Q27","Q28","Q29","Q30","Q31","Q32","Q33","Q34","Q35","Q36","Q37","Q38","Q39","Q40","Q41","Q42","Q43","Q44","Q45","Q46","Q47","Q48","Q49","Q50","Q51","Q52","Q53","Q54","Q55","Q56","Q57","Q58","Q59","Q60","Q61","Q62","Q63","Q64","Q65","Q66","Q67","Q68","Q69","Q70","Q71","Q72","Q73","Q74","Q75","Q76","Q77","Q78","Q79","Q80","Q81","Q82","Q83","Q84","Q85","Q86","Q87","Q88","Q89","Q90","Q91","Q92","Q93","Q94","Q95","Q96","Q97","Q98","Q99","V01","V02","V03","V04","V05","V06","V07","V08","V09","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21","V22","V23","V24","V25","V26","V27","V28","V29","V30","V31","V32","V33","V34","V35","V36","V37","V38","V39","V40","V41","V42","V43","V44","V45","V46","V47","V48","V49","V50","V51","V52","V53","V54","V55","V56","V57","V58","V59","V60","V61","V62","V63","V64","V65","V66","V67","V68","V69","V70","V71","V72","V73","V74","V75","V76","V77","V78","V79","V80","V81","V82","V83","V84","V85","V86","V87","V88","V89","V90","V91","V92","V93","V94","V95","V96","V97","V98","V99","W00","W01","W02","W03","W04","W05","W06","W07","W08","W09","W10","W11","W12","W13","W14","W15","W16","W17","W18","W19","W20","W21","W22","W23","W24","W25","W26","W27","W28","W29","W30","W31","W32","W33","W34","W35","W36","W37","W38","W39","W40","W41","W42","W43","W44","W45","W46","W47","W48","W49","W50","W51","W52","W53","W54","W55","W56","W57","W58","W59","W60","W61","W62","W63","W64","W65","W66","W67","W68","W69","W70","W71","W72","W73","W74","W75","W76","W77","W78","W79","W80","W81","W82","W83","W84","W85","W86","W87","W88","W89","W90","W91","W92","W93","W94","W95","W96","W97","W98","W99","X00","X01","X02","X03","X04","X05","X06","X07","X08","X09","X10","X11","X12","X13","X14","X15","X16","X17","X18","X19","X20","X21","X22","X23","X24","X25","X26","X27","X28","X29","X30","X31","X32","X33","X34","X35","X36","X37","X38","X39","X40","X41","X42","X43","X44","X45","X46","X47","X48","X49","X50","X51","X52","X53","X54","X55","X56","X57","X58","X59","Y85","Y86","U03","X60","X61","X62","X63","X64","X65","X66","X67","X68","X69","X70","X71","X72","X73","X74","X75","X76","X77","X78","X79","X80","X81","X82","X83","X84","Y870","U01","U02","X85","X86","X87","X88","X89","X90","X91","X92","X93","X94","X95","X96","X97","X98","X99","Y00","Y01","Y02","Y03","Y04","Y05","Y06","Y07","Y08","Y09","Y871","Y35","Y890","Y36","Y891","Y40","Y41","Y42","Y43","Y44","Y45","Y46","Y47","Y48","Y49","Y50","Y51","Y52","Y53","Y54","Y55","Y56","Y57","Y58","Y59","Y60","Y61","Y62","Y63","Y64","Y65","Y66","Y67","Y68","Y69","Y70","Y71","Y72","Y73","Y74","Y75","Y76","Y77","Y78","Y79","Y80","Y81","Y82","Y83","Y84","Y88","A047","U071"],["A01","A02","A03","A06","A16","A17","A18","A19","A37","A38","A46","A39","A40","A41","A50","A51","A52","A53","A80","A83","A84",null,"B05","B15","B16","B17","B18","B19","B20","B21","B22","B23","B24","B50","B51","B52","B53","B54","C00","C01","C02","C03","C04","C05","C06","C07","C08","C09","C10","C11","C12","C13","C14","C15","C16","C17","C18","C19","C20","C21","C22","C23","C24","C25","C26","C27","C28","C29","C30","C31","C32","C33","C34","C35","C36","C37","C38","C39","C40","C41","C42","C43","C44","C45","C46","C47","C48","C49","C50","C51","C52","C53","C54","C55","C56","C57","C58","C59","C60","C61","C62","C63","C64","C65","C66","C67","C68","C69","C70","C71","C72","C73","C74","C75","C76","C77","C78","C79","C80","C81","C82","C83","C84","C85","C86","C87","C88","C89","C90","C91","C92","C93","C94","C95","C96","C97","D00","D01","D02","D03","D04","D05","D06","D07","D08","D09","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","D32","D33","D34","D35","D36","D37","D38","D39","D40","D41","D42","D43","D44","D45","D46","D47","D48","D50","D51","D52","D53","D54","D55","D56","D57","D58","D59","D60","D61","D62","D63","D64","E10","E11","E12","E13","E14","E40","E41","E42","E43","E44","E45","E46","E47","E48","E49","E50","E51","E52","E53","E54","E55","E56","E57","E58","E59","E60","E61","E62","E63","E64","G00","G03","G20","G21","G30","I00","I01","I02","I03","I04","I05","I06","I07","I08","I09","I11","I13","I20","I21","I22","I23","I24","I25","I26","I27","I28","I29","I30","I31","I32","I33","I34","I35","I36","I37","I38","I39","I40","I41","I42","I43","I44","I45","I46","I47","I48","I49","I50","I51","I10","I12","I15","I60","I61","I62","I63","I64","I65","I66","I67","I68","I69","I70","I71","J09","J10","J11","J12","J13","J14","J15","J16","J17","J18","J20","J21","J40","J41","J42","J43","J44","J45","J46","J47","J60","J61","J62","J63","J64","J65","J66","J68",null,"J69","K25","K26","K27","K28","K35","K36","K37","K38","K40","K41","K42","K43","K44","K45","K46","K70","K73","K74","K80","K81","K82","N00","N01","N02","N03","N04","N05","N06","N07","N17","N18","N19","N25","N26","N27","N10","N11","N12",null,null,"N40","N70","N71","N72","N73","N74","N75","N76","O00","O01","O02","O03","O04","O05","O06","O07","O08","O09","O10","O11","O12","O13","O14","O15","O16","O17","O18","O19","O20","O21","O22","O23","O24","O25","O26","O27","O28","O29","O30","O31","O32","O33","O34","O35","O36","O37","O38","O39","O40","O41","O42","O43","O44","O45","O46","O47","O48","O49","O50","O51","O52","O53","O54","O55","O56","O57","O58","O59","O60","O61","O62","O63","O64","O65","O66","O67","O68","O69","O70","O71","O72","O73","O74","O75","O76","O77","O78","O79","O80","O81","O82","O83","O84","O85","O86","O87","O88","O89","O90","O91","O92","O93","O94","O95","O96","O97","O98","O99","P00","P01","P02","P03","P04","P05","P06","P07","P08","P09","P10","P11","P12","P13","P14","P15","P16","P17","P18","P19","P20","P21","P22","P23","P24","P25","P26","P27","P28","P29","P30","P31","P32","P33","P34","P35","P36","P37","P38","P39","P40","P41","P42","P43","P44","P45","P46","P47","P48","P49","P50","P51","P52","P53","P54","P55","P56","P57","P58","P59","P60","P61","P62","P63","P64","P65","P66","P67","P68","P69","P70","P71","P72","P73","P74","P75","P76","P77","P78","P79","P80","P81","P82","P83","P84","P85","P86","P87","P88","P89","P90","P91","P92","P93","P94","P95","P96","Q00","Q01","Q02","Q03","Q04","Q05","Q06","Q07","Q08","Q09","Q10","Q11","Q12","Q13","Q14","Q15","Q16","Q17","Q18","Q19","Q20","Q21","Q22","Q23","Q24","Q25","Q26","Q27","Q28","Q29","Q30","Q31","Q32","Q33","Q34","Q35","Q36","Q37","Q38","Q39","Q40","Q41","Q42","Q43","Q44","Q45","Q46","Q47","Q48","Q49","Q50","Q51","Q52","Q53","Q54","Q55","Q56","Q57","Q58","Q59","Q60","Q61","Q62","Q63","Q64","Q65","Q66","Q67","Q68","Q69","Q70","Q71","Q72","Q73","Q74","Q75","Q76","Q77","Q78","Q79","Q80","Q81","Q82","Q83","Q84","Q85","Q86","Q87","Q88","Q89","Q90","Q91","Q92","Q93","Q94","Q95","Q96","Q97","Q98","Q99","V01","V02","V03","V04","V05","V06","V07","V08","V09","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20","V21","V22","V23","V24","V25","V26","V27","V28","V29","V30","V31","V32","V33","V34","V35","V36","V37","V38","V39","V40","V41","V42","V43","V44","V45","V46","V47","V48","V49","V50","V51","V52","V53","V54","V55","V56","V57","V58","V59","V60","V61","V62","V63","V64","V65","V66","V67","V68","V69","V70","V71","V72","V73","V74","V75","V76","V77","V78","V79","V80","V81","V82","V83","V84","V85","V86","V87","V88","V89","V90","V91","V92","V93","V94","V95","V96","V97","V98","V99","W00","W01","W02","W03","W04","W05","W06","W07","W08","W09","W10","W11","W12","W13","W14","W15","W16","W17","W18","W19","W20","W21","W22","W23","W24","W25","W26","W27","W28","W29","W30","W31","W32","W33","W34","W35","W36","W37","W38","W39","W40","W41","W42","W43","W44","W45","W46","W47","W48","W49","W50","W51","W52","W53","W54","W55","W56","W57","W58","W59","W60","W61","W62","W63","W64","W65","W66","W67","W68","W69","W70","W71","W72","W73","W74","W75","W76","W77","W78","W79","W80","W81","W82","W83","W84","W85","W86","W87","W88","W89","W90","W91","W92","W93","W94","W95","W96","W97","W98","W99","X00","X01","X02","X03","X04","X05","X06","X07","X08","X09","X10","X11","X12","X13","X14","X15","X16","X17","X18","X19","X20","X21","X22","X23","X24","X25","X26","X27","X28","X29","X30","X31","X32","X33","X34","X35","X36","X37","X38","X39","X40","X41","X42","X43","X44","X45","X46","X47","X48","X49","X50","X51","X52","X53","X54","X55","X56","X57","X58","X59","Y85","Y86","U03","X60","X61","X62","X63","X64","X65","X66","X67","X68","X69","X70","X71","X72","X73","X74","X75","X76","X77","X78","X79","X80","X81","X82","X83","X84",null,"U01","U02","X85","X86","X87","X88","X89","X90","X91","X92","X93","X94","X95","X96","X97","X98","X99","Y00","Y01","Y02","Y03","Y04","Y05","Y06","Y07","Y08","Y09",null,"Y35",null,"Y36",null,"Y40","Y41","Y42","Y43","Y44","Y45","Y46","Y47","Y48","Y49","Y50","Y51","Y52","Y53","Y54","Y55","Y56","Y57","Y58","Y59","Y60","Y61","Y62","Y63","Y64","Y65","Y66","Y67","Y68","Y69","Y70","Y71","Y72","Y73","Y74","Y75","Y76","Y77","Y78","Y79","Y80","Y81","Y82","Y83","Y84","Y88",null,null],[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"A852",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"U070",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"N136","N151",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"Y870",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"Y871",null,"Y890",null,"Y891",null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,"A047","U071"],["Salmonella infections","Salmonella infections","Shigellosis and amebiasis","Shigellosis and amebiasis","Tuberculosis","Tuberculosis","Tuberculosis","Tuberculosis","Whooping cough","Scarlet fever and erysipelas","Scarlet fever and erysipelas","Meningococcal infection","Septicemia","Septicemia","Syphilis","Syphilis","Syphilis","Syphilis","Acute poliomyelitis","Arthropod-borne viral encephalitis","Arthropod-borne viral encephalitis","Arthropod-borne viral encephalitis","Measles","Viral hepatitis","Viral hepatitis","Viral hepatitis","Viral hepatitis","Viral hepatitis","Human immunodeficiency virus (HIV) disease","Human immunodeficiency virus (HIV) disease","Human immunodeficiency virus (HIV) disease","Human immunodeficiency virus (HIV) disease","Human immunodeficiency virus (HIV) disease","Malaria","Malaria","Malaria","Malaria","Malaria","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","Malignant neoplasms","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","In situ neoplasms, benign neoplasms and neoplasms of uncertain or unknown behavior","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Anemias","Diabetes mellitus","Diabetes mellitus","Diabetes mellitus","Diabetes mellitus","Diabetes mellitus","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Nutritional deficiencies","Meningitis","Meningitis","Parkinson disease","Parkinson disease","Alzheimer disease","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Diseases of heart","Essential hypertension and hypertensive renal disease","Essential hypertension and hypertensive renal disease","Essential hypertension and hypertensive renal disease","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Cerebrovascular diseases","Atherosclerosis","Aortic aneurysm and dissection","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Influenza and pneumonia","Acute bronchitis and bronchiolitis","Acute bronchitis and bronchiolitis","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Chronic lower respiratory diseases","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumoconioses and chemical effects","Pneumonitis due to solids and liquids","Peptic ulcer","Peptic ulcer","Peptic ulcer","Peptic ulcer","Diseases of appendix","Diseases of appendix","Diseases of appendix","Diseases of appendix","Hernia","Hernia","Hernia","Hernia","Hernia","Hernia","Hernia","Chronic liver disease and cirrhosis","Chronic liver disease and cirrhosis","Chronic liver disease and cirrhosis","Cholelithiasis and other disorders of gallbladder","Cholelithiasis and other disorders of gallbladder","Cholelithiasis and other disorders of gallbladder","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Nephritis, nephrotic syndrome and nephrosis","Infections of kidney","Infections of kidney","Infections of kidney","Infections of kidney","Infections of kidney","Hyperplasia of prostate","Inflammatory diseases of female pelvic organs","Inflammatory diseases of female pelvic organs","Inflammatory diseases of female pelvic organs","Inflammatory diseases of female pelvic organs","Inflammatory diseases of female pelvic organs","Inflammatory diseases of female pelvic organs","Inflammatory diseases of female pelvic organs","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Pregnancy, childbirth and the puerperium","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Certain conditions originating in the perinatal period","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Congenital malformations, deformations and chromosomal abnormalities","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Accidents (unintentional injuries)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Intentional self-harm (suicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Assault (homicide)","Legal intervention","Legal intervention","Operations of war and their sequelae","Operations of war and their sequelae","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Complications of medical and surgical care","Enterocolitis due to Clostridium difficile","COVID-19"],["GR113-001","GR113-001","GR113-002","GR113-002","GR113-004","GR113-004","GR113-004","GR113-004","GR113-007","GR113-008","GR113-008","GR113-009","GR113-010","GR113-010","GR113-011","GR113-011","GR113-011","GR113-011","GR113-012","GR113-013","GR113-013","GR113-013","GR113-014","GR113-015","GR113-015","GR113-015","GR113-015","GR113-015","GR113-016","GR113-016","GR113-016","GR113-016","GR113-016","GR113-017","GR113-017","GR113-017","GR113-017","GR113-017","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-019","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-044","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-045","GR113-046","GR113-046","GR113-046","GR113-046","GR113-046","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-047","GR113-050","GR113-050","GR113-051","GR113-051","GR113-052","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-054","GR113-069","GR113-069","GR113-069","GR113-070","GR113-070","GR113-070","GR113-070","GR113-070","GR113-070","GR113-070","GR113-070","GR113-070","GR113-070","GR113-071","GR113-073","GR113-076","GR113-076","GR113-076","GR113-076","GR113-076","GR113-076","GR113-076","GR113-076","GR113-076","GR113-076","GR113-080","GR113-080","GR113-082","GR113-082","GR113-082","GR113-082","GR113-082","GR113-082","GR113-082","GR113-082","GR113-087","GR113-087","GR113-087","GR113-087","GR113-087","GR113-087","GR113-087","GR113-087","GR113-087","GR113-088","GR113-090","GR113-090","GR113-090","GR113-090","GR113-091","GR113-091","GR113-091","GR113-091","GR113-092","GR113-092","GR113-092","GR113-092","GR113-092","GR113-092","GR113-092","GR113-093","GR113-093","GR113-093","GR113-096","GR113-096","GR113-096","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-097","GR113-102","GR113-102","GR113-102","GR113-102","GR113-102","GR113-103","GR113-104","GR113-104","GR113-104","GR113-104","GR113-104","GR113-104","GR113-104","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-105","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-108","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-109","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-112","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-124","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-127","GR113-130","GR113-130","GR113-134","GR113-134","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-135","GR113-136","GR113-137"]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>icd_code<\/th>\n      <th>icd_3char<\/th>\n      <th>icd_4char<\/th>\n      <th>cause<\/th>\n      <th>cause_id<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"orderable":false,"targets":0},{"name":" ","targets":0},{"name":"icd_code","targets":1},{"name":"icd_3char","targets":2},{"name":"icd_4char","targets":3},{"name":"cause","targets":4},{"name":"cause_id","targets":5}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":[],"jsHooks":[]}</script>
+<p>We will use two vectors to save the lists of 4-char and 3-char ICD codes, respectively.</p>
+<pre class="r"><code>crosswalk_4_char_lst &lt;- crosswalk_icd10_vs_causes %&gt;% 
+  filter(!is.na(icd_4char)) %&gt;% 
+  pull(icd_code)
+
+crosswalk_4_char_lst</code></pre>
+<pre><code>##  [1] &quot;A852&quot; &quot;U070&quot; &quot;N136&quot; &quot;N151&quot; &quot;Y870&quot; &quot;Y871&quot; &quot;Y890&quot; &quot;Y891&quot; &quot;A047&quot; &quot;U071&quot;</code></pre>
+<pre class="r"><code>crosswalk_3_char_lst &lt;- crosswalk_icd10_vs_causes %&gt;% 
+  filter(is.na(icd_4char)) %&gt;% 
+  pull(icd_code)
+
+# crosswalk_3_char_lst</code></pre>
+</div>
+<div id="top-10-leading-causes-of-death" class="section level3">
+<h3>Top 10 Leading Causes of Death</h3>
+<p>We partition the mortality data based on the condition if the ICD-10 code is in the 4-char ICD list or not. For rows with ICD-10 codes in the 4-char ICD list, those rows will left join the crosswalk using the key <code>Icd_code</code>. On the other hand, for rows with ICD-10 codes not in the 4-char ICD list, we get the first 3 characters in the ICD-10 code, check if the 3-char code in in the 3-char ICD list, and then left join the crosswalk by the key <code>icd_3char</code>.</p>
+<p>Then we bind the rows from the two partitions, count the number of cases for each death cause, and find the top 10 leading causes.</p>
+<pre class="r"><code>leading_causes_2022 &lt;- bind_rows(
+  mort_2022 %&gt;% 
+    filter(icd_code %in% crosswalk_4_char_lst) %&gt;% 
+    left_join( crosswalk_icd10_vs_causes %&gt;% select(icd_code, cause), by = &quot;icd_code&quot;) ,
+  
+  mort_2022 %&gt;% 
+    filter(!(icd_code %in% crosswalk_4_char_lst)) %&gt;% 
+    mutate(icd_3char = str_sub(icd_code, 1L, 3L)) %&gt;% 
+    filter(icd_3char %in% crosswalk_3_char_lst) %&gt;% 
+    left_join( crosswalk_icd10_vs_causes %&gt;% select(2,4), by = &quot;icd_3char&quot;) %&gt;% 
+    filter(!is.na(cause))
+) %&gt;% 
+  count(cause) %&gt;% 
+  top_n(10, n) %&gt;% 
+  arrange(desc(n)) %&gt;% 
+  mutate(rank = 1:10, .before = 1)
+
+leading_causes_2022 %&gt;% 
+  gt() %&gt;% 
+  cols_label(
+    rank = &quot;Rank&quot;,
+    cause = &quot;Cause of death&quot;, 
+    n = &quot;Number of deaths&quot;) %&gt;% 
+  fmt_number(
+    columns = n,
+    decimals = 0,
+    sep_mark = &quot;,&quot;
+  )</code></pre>
+<div id="jnjrcskqbe" style="padding-left:0px;padding-right:0px;padding-top:10px;padding-bottom:10px;overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<style>#jnjrcskqbe table {
+  font-family: system-ui, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#jnjrcskqbe thead, #jnjrcskqbe tbody, #jnjrcskqbe tfoot, #jnjrcskqbe tr, #jnjrcskqbe td, #jnjrcskqbe th {
+  border-style: none;
+}
+
+#jnjrcskqbe p {
+  margin: 0;
+  padding: 0;
+}
+
+#jnjrcskqbe .gt_table {
+  display: table;
+  border-collapse: collapse;
+  line-height: normal;
+  margin-left: auto;
+  margin-right: auto;
+  color: #333333;
+  font-size: 16px;
+  font-weight: normal;
+  font-style: normal;
+  background-color: #FFFFFF;
+  width: auto;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #A8A8A8;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #A8A8A8;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_caption {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+#jnjrcskqbe .gt_title {
+  color: #333333;
+  font-size: 125%;
+  font-weight: initial;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-color: #FFFFFF;
+  border-bottom-width: 0;
+}
+
+#jnjrcskqbe .gt_subtitle {
+  color: #333333;
+  font-size: 85%;
+  font-weight: initial;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-color: #FFFFFF;
+  border-top-width: 0;
+}
+
+#jnjrcskqbe .gt_heading {
+  background-color: #FFFFFF;
+  text-align: center;
+  border-bottom-color: #FFFFFF;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_bottom_border {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_col_headings {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_col_heading {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 6px;
+  padding-left: 5px;
+  padding-right: 5px;
+  overflow-x: hidden;
+}
+
+#jnjrcskqbe .gt_column_spanner_outer {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: normal;
+  text-transform: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+#jnjrcskqbe .gt_column_spanner_outer:first-child {
+  padding-left: 0;
+}
+
+#jnjrcskqbe .gt_column_spanner_outer:last-child {
+  padding-right: 0;
+}
+
+#jnjrcskqbe .gt_column_spanner {
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: bottom;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  overflow-x: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+#jnjrcskqbe .gt_spanner_row {
+  border-bottom-style: hidden;
+}
+
+#jnjrcskqbe .gt_group_heading {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  text-align: left;
+}
+
+#jnjrcskqbe .gt_empty_group_heading {
+  padding: 0.5px;
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  vertical-align: middle;
+}
+
+#jnjrcskqbe .gt_from_md > :first-child {
+  margin-top: 0;
+}
+
+#jnjrcskqbe .gt_from_md > :last-child {
+  margin-bottom: 0;
+}
+
+#jnjrcskqbe .gt_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  margin: 10px;
+  border-top-style: solid;
+  border-top-width: 1px;
+  border-top-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 1px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 1px;
+  border-right-color: #D3D3D3;
+  vertical-align: middle;
+  overflow-x: hidden;
+}
+
+#jnjrcskqbe .gt_stub {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jnjrcskqbe .gt_stub_row_group {
+  color: #333333;
+  background-color: #FFFFFF;
+  font-size: 100%;
+  font-weight: initial;
+  text-transform: inherit;
+  border-right-style: solid;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+  padding-left: 5px;
+  padding-right: 5px;
+  vertical-align: top;
+}
+
+#jnjrcskqbe .gt_row_group_first td {
+  border-top-width: 2px;
+}
+
+#jnjrcskqbe .gt_row_group_first th {
+  border-top-width: 2px;
+}
+
+#jnjrcskqbe .gt_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jnjrcskqbe .gt_first_summary_row {
+  border-top-style: solid;
+  border-top-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_first_summary_row.thick {
+  border-top-width: 2px;
+}
+
+#jnjrcskqbe .gt_last_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_grand_summary_row {
+  color: #333333;
+  background-color: #FFFFFF;
+  text-transform: inherit;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jnjrcskqbe .gt_first_grand_summary_row {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-top-style: double;
+  border-top-width: 6px;
+  border-top-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_last_grand_summary_row_top {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-left: 5px;
+  padding-right: 5px;
+  border-bottom-style: double;
+  border-bottom-width: 6px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_striped {
+  background-color: rgba(128, 128, 128, 0.05);
+}
+
+#jnjrcskqbe .gt_table_body {
+  border-top-style: solid;
+  border-top-width: 2px;
+  border-top-color: #D3D3D3;
+  border-bottom-style: solid;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_footnotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_footnote {
+  margin: 0px;
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jnjrcskqbe .gt_sourcenotes {
+  color: #333333;
+  background-color: #FFFFFF;
+  border-bottom-style: none;
+  border-bottom-width: 2px;
+  border-bottom-color: #D3D3D3;
+  border-left-style: none;
+  border-left-width: 2px;
+  border-left-color: #D3D3D3;
+  border-right-style: none;
+  border-right-width: 2px;
+  border-right-color: #D3D3D3;
+}
+
+#jnjrcskqbe .gt_sourcenote {
+  font-size: 90%;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+#jnjrcskqbe .gt_left {
+  text-align: left;
+}
+
+#jnjrcskqbe .gt_center {
+  text-align: center;
+}
+
+#jnjrcskqbe .gt_right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#jnjrcskqbe .gt_font_normal {
+  font-weight: normal;
+}
+
+#jnjrcskqbe .gt_font_bold {
+  font-weight: bold;
+}
+
+#jnjrcskqbe .gt_font_italic {
+  font-style: italic;
+}
+
+#jnjrcskqbe .gt_super {
+  font-size: 65%;
+}
+
+#jnjrcskqbe .gt_footnote_marks {
+  font-size: 75%;
+  vertical-align: 0.4em;
+  position: initial;
+}
+
+#jnjrcskqbe .gt_asterisk {
+  font-size: 100%;
+  vertical-align: 0;
+}
+
+#jnjrcskqbe .gt_indent_1 {
+  text-indent: 5px;
+}
+
+#jnjrcskqbe .gt_indent_2 {
+  text-indent: 10px;
+}
+
+#jnjrcskqbe .gt_indent_3 {
+  text-indent: 15px;
+}
+
+#jnjrcskqbe .gt_indent_4 {
+  text-indent: 20px;
+}
+
+#jnjrcskqbe .gt_indent_5 {
+  text-indent: 25px;
+}
+</style>
+<table class="gt_table" data-quarto-disable-processing="false" data-quarto-bootstrap="false">
+  <thead>
+    <tr class="gt_col_headings">
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="Rank">Rank</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_left" rowspan="1" colspan="1" scope="col" id="Cause of death">Cause of death</th>
+      <th class="gt_col_heading gt_columns_bottom_border gt_right" rowspan="1" colspan="1" scope="col" id="Number of deaths">Number of deaths</th>
+    </tr>
+  </thead>
+  <tbody class="gt_table_body">
+    <tr><td headers="rank" class="gt_row gt_right">1</td>
+<td headers="cause" class="gt_row gt_left">Diseases of heart</td>
+<td headers="n" class="gt_row gt_right">702,880</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">2</td>
+<td headers="cause" class="gt_row gt_left">Malignant neoplasms</td>
+<td headers="n" class="gt_row gt_right">608,371</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">3</td>
+<td headers="cause" class="gt_row gt_left">Accidents (unintentional injuries)</td>
+<td headers="n" class="gt_row gt_right">227,039</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">4</td>
+<td headers="cause" class="gt_row gt_left">COVID-19</td>
+<td headers="n" class="gt_row gt_right">186,552</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">5</td>
+<td headers="cause" class="gt_row gt_left">Cerebrovascular diseases</td>
+<td headers="n" class="gt_row gt_right">165,393</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">6</td>
+<td headers="cause" class="gt_row gt_left">Chronic lower respiratory diseases</td>
+<td headers="n" class="gt_row gt_right">147,382</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">7</td>
+<td headers="cause" class="gt_row gt_left">Alzheimer disease</td>
+<td headers="n" class="gt_row gt_right">120,122</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">8</td>
+<td headers="cause" class="gt_row gt_left">Diabetes mellitus</td>
+<td headers="n" class="gt_row gt_right">101,209</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">9</td>
+<td headers="cause" class="gt_row gt_left">Nephritis, nephrotic syndrome and nephrosis</td>
+<td headers="n" class="gt_row gt_right">57,937</td></tr>
+    <tr><td headers="rank" class="gt_row gt_right">10</td>
+<td headers="cause" class="gt_row gt_left">Chronic liver disease and cirrhosis</td>
+<td headers="n" class="gt_row gt_right">54,803</td></tr>
+  </tbody>
+  
+  
+</table>
+</div>
+</div>
+<div id="comparison-with-cdc-data" class="section level3">
+<h3>Comparison with CDC Data</h3>
+<p>We can compare our results with the official NCHS data from in <a href="https://www.cdc.gov/nchs/data/databriefs/db492-tables.pdf#4">NCHS Data Brief, Number 492, December 2023</a>. The ranks, top causes, and number of deaths we obtained are the same those in <code>Data table for Figure 4</code> for 2022.</p>
+<p><img src="images/mort_2022_figure_4.png" width="90%" /></p>
+</div>
+</div>
+<div id="python" class="section level2">
+<h2>Python</h2>
+<p>We can obtain the same results using Python.</p>
+<div id="import-packages-1" class="section level3">
+<h3>Import packages</h3>
+<pre class="python"><code>import pandas as pd
+import numpy as np</code></pre>
+</div>
+<div id="import-data" class="section level3">
+<h3>Import data</h3>
+<div id="mortality-data-1" class="section level4">
+<h4>2022 mortality data</h4>
+<pre class="python"><code>cols_pecs = [(20-1, 20), (146-1, 149)]  # define column widths
+cols_names = [&quot;resident_status&quot;, &quot;icd_code&quot;]
+
+mort_2022_py = (
+  pd.read_fwf(&#39;data/VS22MORT.DUSMCPUB_r20240307&#39;, 
+                encoding = &#39;utf_8&#39;, 
+                index_col = False,
+                colspecs=cols_pecs, 
+                names= cols_names)
+ .query(&#39;resident_status!=4&#39;)           
+ )
+
+mort_2022_py.head(10)</code></pre>
+<pre><code>##    resident_status icd_code
+## 0                1     C349
+## 1                1     C220
+## 2                2     I251
+## 3                1      C64
+## 4                1     U071
+## 5                1     J123
+## 6                2     J101
+## 7                2     U071
+## 8                1     J449
+## 9                1     M348</code></pre>
+</div>
+<div id="crosswalk" class="section level4">
+<h4>Crosswalk</h4>
+<pre class="python"><code>crosswalk_icd10_vs_causes = (pd.read_csv(&quot;data/crosswalk_icd10_vs_causes.csv&quot;)
+ .assign(icd10 = lambda df_: df_[&#39;icd10&#39;].str.replace(&#39;.&#39;, &#39;&#39;))
+ .assign(
+     icd_3char = lambda df_: np.where(df_[&#39;icd10&#39;].str.len() == 3, df_[&#39;icd10&#39;], np.nan ),
+     icd_4char = lambda df_: np.where(df_[&#39;icd10&#39;].str.len() == 4, df_[&#39;icd10&#39;], np.nan )
+ )
+)
+
+crosswalk_icd10_vs_causes</code></pre>
+<pre><code>##        cause_id  ... icd_4char
+## 0     GR113-001  ...       NaN
+## 1     GR113-001  ...       NaN
+## 2     GR113-002  ...       NaN
+## 3     GR113-002  ...       NaN
+## 4     GR113-004  ...       NaN
+## ...         ...  ...       ...
+## 1032  GR113-135  ...       NaN
+## 1033  GR113-135  ...       NaN
+## 1034  GR113-135  ...       NaN
+## 1035  GR113-136  ...      A047
+## 1036  GR113-137  ...      U071
+## 
+## [1037 rows x 5 columns]</code></pre>
+<pre class="python"><code>crosswalk_4_char_lst = (crosswalk_icd10_vs_causes
+ .query(&#39;icd_4char.notna()&#39;)
+ [&#39;icd_4char&#39;]
+)
+
+crosswalk_4_char_lst</code></pre>
+<pre><code>## 21      A852
+## 322     U070
+## 362     N136
+## 363     N151
+## 956     Y870
+## 984     Y871
+## 986     Y890
+## 988     Y891
+## 1035    A047
+## 1036    U071
+## Name: icd_4char, dtype: object</code></pre>
+<pre class="python"><code>crosswalk_3_char_lst = (crosswalk_icd10_vs_causes
+ .query(&#39;icd_3char.notna()&#39;)
+ [&#39;icd_3char&#39;]
+)
+
+# crosswalk_3_char_lst</code></pre>
+</div>
+</div>
+<div id="process-data" class="section level3">
+<h3>Process data</h3>
+<pre class="python"><code>leading_causes_2022_py = (pd.concat([
+    (mort_2022_py
+    .loc[lambda df_: df_[&#39;icd_code&#39;].isin(crosswalk_4_char_lst)]
+    .merge(crosswalk_icd10_vs_causes[[&#39;icd10&#39;, &#39;cause&#39;]],
+        how=&#39;left&#39;, left_on=&#39;icd_code&#39;, right_on=&#39;icd10&#39;)),
+
+    (mort_2022_py
+    .loc[lambda df_: ~df_[&#39;icd_code&#39;].isin(crosswalk_4_char_lst)]
+    .assign(icd_3char = lambda df_: df_[&#39;icd_code&#39;].str.slice(0,3))
+    .loc[lambda df_: df_[&#39;icd_3char&#39;].isin(crosswalk_3_char_lst)]
+    .merge(crosswalk_icd10_vs_causes[[&#39;icd_3char&#39;, &#39;cause&#39;]],
+            how=&#39;left&#39;, on=&#39;icd_3char&#39;) 
+    )    
+])
+.groupby([&#39;cause&#39;], as_index=False)
+.agg(deaths = (&#39;cause&#39;,&#39;size&#39;))
+.nlargest(10, columns=[&#39;deaths&#39;])
+.reset_index(drop=True)
+.assign(rank = range(1, 11))
+)
+
+leading_causes_2022_py</code></pre>
+<pre><code>##                                           cause  deaths  rank
+## 0                            Diseases of heart   702880     1
+## 1                          Malignant neoplasms   608371     2
+## 2           Accidents (unintentional injuries)   227039     3
+## 3                                     COVID-19   186552     4
+## 4                     Cerebrovascular diseases   165393     5
+## 5           Chronic lower respiratory diseases   147382     6
+## 6                            Alzheimer disease   120122     7
+## 7                            Diabetes mellitus   101209     8
+## 8  Nephritis, nephrotic syndrome and nephrosis    57937     9
+## 9          Chronic liver disease and cirrhosis    54803    10</code></pre>
+</div>
+</div>
+</div>
+<div id="summary" class="section level1">
+<h1>Summary</h1>
+<p>We began with the 2022 NCHS mortality microdata and, using a crosswalk to link ICD-10 codes to rankable causes of death, mapped each specific ICD-10 code to broader, standardized cause categories. This approach enabled us to compile and rank the top 10 leading causes of death in 2022 in the United States.</p>
+<p>This analysis demonstrates the power of NCHS mortality microdata in uncovering detailed insights into mortality patterns. By facilitating an in-depth look at specific causes of death, this data is useful for researchers, policymakers, and public health officials who are working to reduce preventable deaths, allocate resources more effectively, and ultimately improve population health outcomes.</p>
+<p>This post also outlines a framework for several potential follow-up analyses using mortality data. For instance, we could examine how leading causes of death vary across demographic factors like age, gender, race, and ethnicity, helping to reveal disparities and target interventions accordingly. Additionally, we could explore trends over time to observe shifts in mortality patterns, providing insight into the effectiveness of public health interventions, lifestyle changes, and emerging health threats.</p>
+<p>Other follow-up analyses include age adjustment, which accounts for changes in population age structure, offering a clearer view of mortality rate shifts that aren’t solely driven by an aging population. Geographic analysis, where possible (e.g., using <a href="https://www.cdc.gov/nchs/nvss/nvss-restricted-data.htm">Restricted-Use Vital Statistics Data</a>), could identify regional differences in mortality that may relate to local factors like healthcare access, socioeconomic conditions, or environmental risks.</p>
+<p>For this analysis, we used R and Python, but the methods and workflow can be adapted to other analytical languages, such as SAS.</p>
+</div>
