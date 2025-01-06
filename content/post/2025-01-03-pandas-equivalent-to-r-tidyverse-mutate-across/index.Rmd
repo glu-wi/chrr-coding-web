@@ -1,0 +1,169 @@
+---
+title: Pandas Equivalent to R Tidyverse 'mutate(across())'
+author: GL
+date: '2025-01-06'
+slug: pandas-equivalent-to-r-tidyverse-mutate-across
+categories:
+  - Python
+  - R
+tags:
+  - Python
+  - R
+output:
+  blogdown::html_page:
+    toc: true 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(rvest)
+library(httr)
+library(jsonlite)
+library(kableExtra)
+
+print_kbl <- function(df, title="", f_width=FALSE){
+  df |> 
+    kbl(caption = title) |> 
+    kable_styling(bootstrap_options = c("striped", "hover"), full_width = f_width, position = "left")
+}
+```
+
+# Introduction
+
+Data manipulation is central to data analytics, and R’s `tidyverse` and Python’s `pandas` are two of the most popular tools for this purpose. While both ecosystems are powerful, they differ in syntax and philosophy. In R, the `tidyverse` emphasizes simplicity and readability, and `mutate(across())` is a prime example. This function allows users to efficiently apply transformations to multiple columns, whether it’s standardizing values, performing custom calculations, or applying multiple functions in one step.
+
+Python’s `pandas` library, although it lacks a direct equivalent to `mutate(across())`, provides a versatile set of tools like `assign` and method chaining that can achieve similar results. However, navigating these tools to replicate `tidyverse` functionality requires familiarity with pandas’ idiomatic approaches.
+
+This post aims to guide users through translating `mutate(across())` from R into `pandas`, offering practical examples and tips. Whether you're transitioning between the two languages or working in a multilingual data environment, this post will help you leverage the strengths of both tools effectively.
+
+# Understanding mutate(across())
+
+The `mutate(across())` function can apply transformations to multiple columns efficiently and intuitively. It is particularly useful when working with datasets where similar operations need to be applied to groups of variables, such as normalizing numeric columns, applying conditional logic, or summarizing data.
+
+At its core, `mutate(across())` combines the power of `mutate()` for adding or modifying columns with `across()` for selecting columns and applying transformations. Its syntax is compact and highly expressive, making it a preferred choice for those seeking clarity and brevity in their data wrangling code.
+
+## 1. Applying a Single Transformation
+
+One of the simplest use cases for `mutate(across())` is applying a single function to a subset of columns. For instance, suppose you have a dataset containing numeric columns, and you want to scale all of them by dividing by 100.
+
+```{r}
+library(dplyr)
+
+# Example dataset
+df <- tibble(
+  id = 1:5,
+  sales = c(100, 200, 300, 400, 500),
+  profit = c(10, 20, 30, 40, 50)
+)
+
+df
+
+# Applying a single transformation
+df %>%
+  mutate(across(c(sales, profit), ~ . / 100))
+
+
+```
+
+Here, `across()` specifies the columns to transform (`sales` and `profit`), and the lambda-style syntax `~ .x / 100` defines the operation.
+
+## 2. Applying Multiple Functions
+
+mutate(across()) can also apply multiple functions to the same set of columns, generating new columns for each transformation. This is useful for tasks like summarizing data with multiple statistics.
+
+```{r}
+df %>%
+  mutate(across(c(sales, profit), list(mean = mean, sd = sd), .names = "{col}_{fn}"))
+
+```
+
+The `.names` argument controls how the new column names are generated, incorporating placeholders like `{col}` (original column name) and `{fn}` (function name).
+
+## 3. Combining Conditional Logic
+
+Another strength of `mutate(across())` is its ability to integrate conditional logic. For instance, you might want to apply different transformations based on column values.
+
+```{r}
+df %>%
+  mutate(across(c(sales, profit), ~ if_else(. > 300, . * 10, .)))
+
+```
+
+In this example, values greater than 300 are multiplied by 10, while others remain unchanged.
+
+# The Pandas Approach
+
+While `pandas` doesn't have a direct equivalent to R's `mutate(across())`, it offers a suite of tools that can replicate its functionality. 
+
+## 1. Using assign() for a Single Transformation
+
+The `assign()` method can be combined with pandas' vectorized operations to modify multiple columns.
+
+```{r include=FALSE}
+library(reticulate)
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+
+# Example dataset
+df = pd.DataFrame({
+    'id': [1, 2, 3, 4, 5],
+    'sales': [100, 200, 300, 400, 500],
+    'profit': [10, 20, 30, 40, 50]
+})
+
+df
+
+# Applying a single transformation with assign
+df.assign(
+    sales=lambda x: x['sales'] / 100,
+    profit=lambda x: x['profit'] / 100
+)
+```
+
+In this example, we use `assign()` to create new columns `sales` and `profit` by dividing the original columns by 100. The lambda function syntax allows us to reference the columns directly. Pandas `assign()` is similar to tidyverse `mutate()` in that it returns a new DataFrame with the modified columns. 
+
+How can we do `across()` in pandas? We can unpack a dictionary comprehension into the keyword arguments of `assign()` to apply the same transformation to multiple columns.
+
+```{python}
+df.assign(
+  **{col: df[col] / 100 for col in ['sales', 'profit']}
+  )
+```
+
+The dictionary comprehension creates a dictionary where the keys are the column names (i.e., 'sales', 'profit') and the values are the desired calculations. The double-asterisk operator (**) unpacks the dictionary, passing its key-value pairs as keyword arguments to the assign function.
+
+To apply a single transformation across selected columns, we can also use the `apply()` method combined with lambda functions or NumPy operations. However, `apply()` can be inefficient in certain scenarios. Unlike many Pandas operations, apply() doesn't leverage vectorization, which performs operations on entire arrays at once. Instead, it iterates over rows or columns individually, leading to slower performance especially for large datasets.
+
+## 2. Applying Multiple Functions
+
+To apply multiple functions to the same set of columns, we can use a dictionary comprehension to generate new columns with the desired transformations. 
+
+```{python}
+
+df.assign(
+  **{f"{col}_{fn}": df[col].agg(fn) for col in ['sales', 'profit'] for fn in ['mean', 'std']}
+)
+```
+
+
+## 3. Conditional Logic with assign
+
+We can integrate conditional logic directly into assign() using vectorized where() method from `numpy` .
+
+```{python}
+df.assign(
+  **{col: np.where(df[col] > 300, df[col] * 10, df[col]) for col in ['sales', 'profit']}
+)
+```
+
+# Conclusion
+
+In this post, we’ve explored how to translate the powerful functionality of R’s mutate(across()) from the tidyverse into the pandas ecosystem. While pandas doesn’t offer an exact equivalent, its versatile tools—like assign and vectorized operations—enable users to achieve the same outcomes efficiently. By strategically combining these features, we can create clean, expressive, and performant workflows in Python that rival those in R.
+
+The comparison highlights the strengths of both R and Python for data manipulation. R, with its intuitive and concise tidyverse syntax, excels in tasks requiring statistical analysis and rapid data exploration. Python, with its flexibility and ecosystem of libraries, is a robust choice for scalable data engineering, machine learning, and integration with production systems. Each language has unique advantages, and understanding how to leverage their tools can significantly enhance your data workflow.
+

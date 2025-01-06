@@ -1,0 +1,191 @@
+---
+title: Pandas Equivalent to R Tidyverse 'mutate(across())'
+author: GL
+date: '2025-01-06'
+slug: pandas-equivalent-to-r-tidyverse-mutate-across
+categories:
+  - Python
+  - R
+tags:
+  - Python
+  - R
+output:
+  blogdown::html_page:
+    toc: true 
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a></li>
+<li><a href="#understanding-mutateacross" id="toc-understanding-mutateacross">Understanding mutate(across())</a>
+<ul>
+<li><a href="#applying-a-single-transformation" id="toc-applying-a-single-transformation">1. Applying a Single Transformation</a></li>
+<li><a href="#applying-multiple-functions" id="toc-applying-multiple-functions">2. Applying Multiple Functions</a></li>
+<li><a href="#combining-conditional-logic" id="toc-combining-conditional-logic">3. Combining Conditional Logic</a></li>
+</ul></li>
+<li><a href="#the-pandas-approach" id="toc-the-pandas-approach">The Pandas Approach</a>
+<ul>
+<li><a href="#using-assign-for-a-single-transformation" id="toc-using-assign-for-a-single-transformation">1. Using assign() for a Single Transformation</a></li>
+<li><a href="#applying-multiple-functions-1" id="toc-applying-multiple-functions-1">2. Applying Multiple Functions</a></li>
+<li><a href="#conditional-logic-with-assign" id="toc-conditional-logic-with-assign">3. Conditional Logic with assign</a></li>
+</ul></li>
+<li><a href="#conclusion" id="toc-conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level1">
+<h1>Introduction</h1>
+<p>Data manipulation is central to data analytics, and R’s <code>tidyverse</code> and Python’s <code>pandas</code> are two of the most popular tools for this purpose. While both ecosystems are powerful, they differ in syntax and philosophy. In R, the <code>tidyverse</code> emphasizes simplicity and readability, and <code>mutate(across())</code> is a prime example. This function allows users to efficiently apply transformations to multiple columns, whether it’s standardizing values, performing custom calculations, or applying multiple functions in one step.</p>
+<p>Python’s <code>pandas</code> library, although it lacks a direct equivalent to <code>mutate(across())</code>, provides a versatile set of tools like <code>assign</code> and method chaining that can achieve similar results. However, navigating these tools to replicate <code>tidyverse</code> functionality requires familiarity with pandas’ idiomatic approaches.</p>
+<p>This post aims to guide users through translating <code>mutate(across())</code> from R into <code>pandas</code>, offering practical examples and tips. Whether you’re transitioning between the two languages or working in a multilingual data environment, this post will help you leverage the strengths of both tools effectively.</p>
+</div>
+<div id="understanding-mutateacross" class="section level1">
+<h1>Understanding mutate(across())</h1>
+<p>The <code>mutate(across())</code> function can apply transformations to multiple columns efficiently and intuitively. It is particularly useful when working with datasets where similar operations need to be applied to groups of variables, such as normalizing numeric columns, applying conditional logic, or summarizing data.</p>
+<p>At its core, <code>mutate(across())</code> combines the power of <code>mutate()</code> for adding or modifying columns with <code>across()</code> for selecting columns and applying transformations. Its syntax is compact and highly expressive, making it a preferred choice for those seeking clarity and brevity in their data wrangling code.</p>
+<div id="applying-a-single-transformation" class="section level2">
+<h2>1. Applying a Single Transformation</h2>
+<p>One of the simplest use cases for <code>mutate(across())</code> is applying a single function to a subset of columns. For instance, suppose you have a dataset containing numeric columns, and you want to scale all of them by dividing by 100.</p>
+<pre class="r"><code>library(dplyr)
+
+# Example dataset
+df &lt;- tibble(
+  id = 1:5,
+  sales = c(100, 200, 300, 400, 500),
+  profit = c(10, 20, 30, 40, 50)
+)
+
+df</code></pre>
+<pre><code>## # A tibble: 5 × 3
+##      id sales profit
+##   &lt;int&gt; &lt;dbl&gt;  &lt;dbl&gt;
+## 1     1   100     10
+## 2     2   200     20
+## 3     3   300     30
+## 4     4   400     40
+## 5     5   500     50</code></pre>
+<pre class="r"><code># Applying a single transformation
+df %&gt;%
+  mutate(across(c(sales, profit), ~ . / 100))</code></pre>
+<pre><code>## # A tibble: 5 × 3
+##      id sales profit
+##   &lt;int&gt; &lt;dbl&gt;  &lt;dbl&gt;
+## 1     1     1    0.1
+## 2     2     2    0.2
+## 3     3     3    0.3
+## 4     4     4    0.4
+## 5     5     5    0.5</code></pre>
+<p>Here, <code>across()</code> specifies the columns to transform (<code>sales</code> and <code>profit</code>), and the lambda-style syntax <code>~ .x / 100</code> defines the operation.</p>
+</div>
+<div id="applying-multiple-functions" class="section level2">
+<h2>2. Applying Multiple Functions</h2>
+<p>mutate(across()) can also apply multiple functions to the same set of columns, generating new columns for each transformation. This is useful for tasks like summarizing data with multiple statistics.</p>
+<pre class="r"><code>df %&gt;%
+  mutate(across(c(sales, profit), list(mean = mean, sd = sd), .names = &quot;{col}_{fn}&quot;))</code></pre>
+<pre><code>## # A tibble: 5 × 7
+##      id sales profit sales_mean sales_sd profit_mean profit_sd
+##   &lt;int&gt; &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;    &lt;dbl&gt;       &lt;dbl&gt;     &lt;dbl&gt;
+## 1     1   100     10        300     158.          30      15.8
+## 2     2   200     20        300     158.          30      15.8
+## 3     3   300     30        300     158.          30      15.8
+## 4     4   400     40        300     158.          30      15.8
+## 5     5   500     50        300     158.          30      15.8</code></pre>
+<p>The <code>.names</code> argument controls how the new column names are generated, incorporating placeholders like <code>{col}</code> (original column name) and <code>{fn}</code> (function name).</p>
+</div>
+<div id="combining-conditional-logic" class="section level2">
+<h2>3. Combining Conditional Logic</h2>
+<p>Another strength of <code>mutate(across())</code> is its ability to integrate conditional logic. For instance, you might want to apply different transformations based on column values.</p>
+<pre class="r"><code>df %&gt;%
+  mutate(across(c(sales, profit), ~ if_else(. &gt; 300, . * 10, .)))</code></pre>
+<pre><code>## # A tibble: 5 × 3
+##      id sales profit
+##   &lt;int&gt; &lt;dbl&gt;  &lt;dbl&gt;
+## 1     1   100     10
+## 2     2   200     20
+## 3     3   300     30
+## 4     4  4000     40
+## 5     5  5000     50</code></pre>
+<p>In this example, values greater than 300 are multiplied by 10, while others remain unchanged.</p>
+</div>
+</div>
+<div id="the-pandas-approach" class="section level1">
+<h1>The Pandas Approach</h1>
+<p>While <code>pandas</code> doesn’t have a direct equivalent to R’s <code>mutate(across())</code>, it offers a suite of tools that can replicate its functionality.</p>
+<div id="using-assign-for-a-single-transformation" class="section level2">
+<h2>1. Using assign() for a Single Transformation</h2>
+<p>The <code>assign()</code> method can be combined with pandas’ vectorized operations to modify multiple columns.</p>
+<pre class="python"><code>import pandas as pd
+import numpy as np
+
+# Example dataset
+df = pd.DataFrame({
+    &#39;id&#39;: [1, 2, 3, 4, 5],
+    &#39;sales&#39;: [100, 200, 300, 400, 500],
+    &#39;profit&#39;: [10, 20, 30, 40, 50]
+})
+
+df</code></pre>
+<pre><code>##    id  sales  profit
+## 0   1    100      10
+## 1   2    200      20
+## 2   3    300      30
+## 3   4    400      40
+## 4   5    500      50</code></pre>
+<pre class="python"><code># Applying a single transformation with assign
+df.assign(
+    sales=lambda x: x[&#39;sales&#39;] / 100,
+    profit=lambda x: x[&#39;profit&#39;] / 100
+)</code></pre>
+<pre><code>##    id  sales  profit
+## 0   1    1.0     0.1
+## 1   2    2.0     0.2
+## 2   3    3.0     0.3
+## 3   4    4.0     0.4
+## 4   5    5.0     0.5</code></pre>
+<p>In this example, we use <code>assign()</code> to create new columns <code>sales</code> and <code>profit</code> by dividing the original columns by 100. The lambda function syntax allows us to reference the columns directly. Pandas <code>assign()</code> is similar to tidyverse <code>mutate()</code> in that it returns a new DataFrame with the modified columns.</p>
+<p>How can we do <code>across()</code> in pandas? We can unpack a dictionary comprehension into the keyword arguments of <code>assign()</code> to apply the same transformation to multiple columns.</p>
+<pre class="python"><code>df.assign(
+  **{col: df[col] / 100 for col in [&#39;sales&#39;, &#39;profit&#39;]}
+  )</code></pre>
+<pre><code>##    id  sales  profit
+## 0   1    1.0     0.1
+## 1   2    2.0     0.2
+## 2   3    3.0     0.3
+## 3   4    4.0     0.4
+## 4   5    5.0     0.5</code></pre>
+<p>The dictionary comprehension creates a dictionary where the keys are the column names (i.e., ‘sales’, ‘profit’) and the values are the desired calculations. The double-asterisk operator (**) unpacks the dictionary, passing its key-value pairs as keyword arguments to the assign function.</p>
+<p>To apply a single transformation across selected columns, we can also use the <code>apply()</code> method combined with lambda functions or NumPy operations. However, <code>apply()</code> can be inefficient in certain scenarios. Unlike many Pandas operations, apply() doesn’t leverage vectorization, which performs operations on entire arrays at once. Instead, it iterates over rows or columns individually, leading to slower performance especially for large datasets.</p>
+</div>
+<div id="applying-multiple-functions-1" class="section level2">
+<h2>2. Applying Multiple Functions</h2>
+<p>To apply multiple functions to the same set of columns, we can use a dictionary comprehension to generate new columns with the desired transformations.</p>
+<pre class="python"><code>df.assign(
+  **{f&quot;{col}_{fn}&quot;: df[col].agg(fn) for col in [&#39;sales&#39;, &#39;profit&#39;] for fn in [&#39;mean&#39;, &#39;std&#39;]}
+)</code></pre>
+<pre><code>##    id  sales  profit  sales_mean   sales_std  profit_mean  profit_std
+## 0   1    100      10       300.0  158.113883         30.0   15.811388
+## 1   2    200      20       300.0  158.113883         30.0   15.811388
+## 2   3    300      30       300.0  158.113883         30.0   15.811388
+## 3   4    400      40       300.0  158.113883         30.0   15.811388
+## 4   5    500      50       300.0  158.113883         30.0   15.811388</code></pre>
+</div>
+<div id="conditional-logic-with-assign" class="section level2">
+<h2>3. Conditional Logic with assign</h2>
+<p>We can integrate conditional logic directly into assign() using vectorized where() method from <code>numpy</code> .</p>
+<pre class="python"><code>df.assign(
+  **{col: np.where(df[col] &gt; 300, df[col] * 10, df[col]) for col in [&#39;sales&#39;, &#39;profit&#39;]}
+)</code></pre>
+<pre><code>##    id  sales  profit
+## 0   1    100      10
+## 1   2    200      20
+## 2   3    300      30
+## 3   4   4000      40
+## 4   5   5000      50</code></pre>
+</div>
+</div>
+<div id="conclusion" class="section level1">
+<h1>Conclusion</h1>
+<p>In this post, we’ve explored how to translate the powerful functionality of R’s mutate(across()) from the tidyverse into the pandas ecosystem. While pandas doesn’t offer an exact equivalent, its versatile tools—like assign and vectorized operations—enable users to achieve the same outcomes efficiently. By strategically combining these features, we can create clean, expressive, and performant workflows in Python that rival those in R.</p>
+<p>The comparison highlights the strengths of both R and Python for data manipulation. R, with its intuitive and concise tidyverse syntax, excels in tasks requiring statistical analysis and rapid data exploration. Python, with its flexibility and ecosystem of libraries, is a robust choice for scalable data engineering, machine learning, and integration with production systems. Each language has unique advantages, and understanding how to leverage their tools can significantly enhance your data workflow.</p>
+</div>
